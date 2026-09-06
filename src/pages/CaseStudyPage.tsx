@@ -4,6 +4,7 @@ import { useCaseStudies } from "../hooks/useCaseStudies";
 import { useProgress } from "../hooks/useProgress";
 import { QuestionPanel } from "../components/QuestionPanel";
 import { ExplanationPanel } from "../components/ExplanationPanel";
+import { SandboxPanel } from "../components/Sandbox/SandboxPanel";
 
 const difficultyLabel: Record<string, string> = {
   beginner: "Beginner",
@@ -60,7 +61,7 @@ export function CaseStudyPage() {
     <div className="min-h-screen">
       {/* Nav */}
       <header className="border-b border-[var(--color-border)] sticky top-0 z-20 backdrop-blur-md bg-[rgba(10,10,15,0.85)]">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
           <Link
             to="/"
             className="flex items-center gap-2 text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors text-sm"
@@ -84,7 +85,9 @@ export function CaseStudyPage() {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-10 space-y-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
+        {/* Narrow content wrapper for scenario + quiz */}
+        <div className="max-w-3xl mx-auto space-y-8">
         {/* Title + meta */}
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -113,18 +116,20 @@ export function CaseStudyPage() {
           <ExplanationPanel cs={cs} selectedId={submitted} />
         )}
 
-        {/* Sandbox placeholder (Phase 4) */}
+        </div>{/* end narrow wrapper */}
+
+        {/* Sandbox — full width, unlocks after submit */}
         {submitted !== null && (
-          <div className="card p-6 border-dashed text-center space-y-2">
-            <p className="text-sm font-medium text-[var(--color-text-muted)]">🧪 Python Sandbox</p>
-            <p className="text-xs text-[var(--color-text-muted)] opacity-60">
-              Coming in Phase 4 — run the experiment code right in your browser.
-            </p>
+          <div className="border-t border-[var(--color-border)] pt-8 mt-8">
+            <SandboxPanel
+              experimentation={cs.experimentation}
+              caseId={cs.id}
+            />
           </div>
         )}
 
         {/* Prev / Next navigation */}
-        <nav className="flex items-center justify-between pt-4 border-t border-[var(--color-border)]">
+        <nav className="flex items-center justify-between pt-4 border-t border-[var(--color-border)] mt-8">
           {prevCs ? (
             <button
               id="nav-prev"

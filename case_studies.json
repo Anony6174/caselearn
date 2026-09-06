@@ -1,0 +1,487 @@
+{
+  "meta": {
+    "schema_version": "1.0",
+    "description": "Case studies for testing ML/statistics application reasoning: given a scenario, choose and justify the right method or metric, then verify the reasoning by running the paired experimentation code.",
+    "difficulty_levels": [
+      "beginner",
+      "intermediate",
+      "advanced"
+    ],
+    "topics_covered": [
+      "ab-testing",
+      "causal-inference",
+      "classification-metrics",
+      "clustering",
+      "confounding-variables",
+      "correlation",
+      "data-leakage",
+      "descriptive-statistics",
+      "experimental-design",
+      "hypothesis-testing",
+      "imbalanced-data",
+      "model-evaluation",
+      "multicollinearity",
+      "non-parametric-tests",
+      "outliers",
+      "overfitting",
+      "regression-diagnostics",
+      "regression-metrics",
+      "time-series",
+      "unsupervised-learning"
+    ],
+    "count": 10
+  },
+  "case_studies": [
+    {
+      "id": "cs-01",
+      "title": "Rehab Recovery Curve",
+      "topics": [
+        "correlation",
+        "descriptive-statistics"
+      ],
+      "difficulty": "beginner",
+      "scenario": "A physical therapist is studying the relationship between the number of weeks a patient has been in rehab (2 to 40 weeks) and their mobility score (0-100, higher is better). Recovery is fast early on and then plateaus - most of the improvement happens in the first 15 weeks, after which mobility scores level off with diminishing gains. The therapist also has two patients with unusually rapid early recovery (medical outliers) whose mobility scores jumped very early.",
+      "question": "Which correlation coefficient should the therapist use to summarize the strength of the relationship between weeks in rehab and mobility score?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Pearson correlation coefficient",
+          "is_correct": false,
+          "explanation": "Pearson assumes the relationship is linear and is sensitive to outliers. Since recovery here follows a diminishing-returns curve (fast early gains, then a plateau) rather than a straight line, and there are two outlier patients, Pearson's r will understate the true strength of the relationship and can be pulled around by the outliers."
+        },
+        {
+          "id": "b",
+          "text": "Spearman's rank correlation coefficient",
+          "is_correct": true,
+          "explanation": "Spearman correlates the ranks of the two variables rather than their raw values, so it captures any monotonic relationship - including the diminishing-returns curve here - without assuming linearity. It is also far less sensitive to the two outlier patients since it only cares about their rank, not their exact score."
+        },
+        {
+          "id": "c",
+          "text": "Point-biserial correlation",
+          "is_correct": false,
+          "explanation": "Point-biserial correlation is designed for the case where one variable is continuous and the other is a true binary/dichotomous variable (e.g., treatment vs. no treatment). Weeks in rehab and mobility score are both continuous, so this does not apply here."
+        },
+        {
+          "id": "d",
+          "text": "Phi coefficient",
+          "is_correct": false,
+          "explanation": "The phi coefficient measures association between two binary categorical variables. Neither weeks in rehab nor mobility score is binary, so this metric is not defined for this data."
+        }
+      ],
+      "correct_option_id": "b",
+      "key_takeaway": "When a relationship is monotonic but not a straight line, or when outliers are present, rank-based correlation (Spearman, or Kendall's tau for smaller samples) is usually a better summary than Pearson.",
+      "common_misconception": "Defaulting to Pearson's r as 'the' correlation coefficient without first checking (e.g., via a scatterplot) whether the relationship is actually linear.",
+      "experimentation": {
+        "objective": "Generate mobility-score data that follows a diminishing-returns curve with two added outliers, then compute Pearson and Spearman correlation on the same data and compare how differently they respond to the outliers.",
+        "data_generation_code": "import numpy as np\n\nrng = np.random.default_rng(42)\n\nweeks = np.linspace(2, 40, 40)\n# diminishing-returns recovery curve + noise\nmobility = 100 * (1 - np.exp(-weeks / 10)) + rng.normal(0, 3, size=weeks.shape)\n\n# two rapid-recovery outlier patients\nweeks = np.append(weeks, [3, 5])\nmobility = np.append(mobility, [95, 92])\n\n# Try it yourself:\n# from scipy.stats import pearsonr, spearmanr\n# pearsonr(weeks, mobility)\n# spearmanr(weeks, mobility)\n",
+        "suggested_exploration": "Compute Pearson and Spearman on the full data, then remove the two outlier patients and recompute Pearson only - see how much it shifts, while Spearman barely moves."
+      }
+    },
+    {
+      "id": "cs-02",
+      "title": "The Fraud Model That Never Flags Fraud",
+      "topics": [
+        "classification-metrics",
+        "imbalanced-data"
+      ],
+      "difficulty": "intermediate",
+      "scenario": "A bank builds a model to flag fraudulent transactions. Out of 100,000 transactions, only 400 (0.4%) are actually fraudulent. The team's first model reports 99.6% accuracy on the test set, and everyone is thrilled - until someone points out the model predicts 'not fraud' for every single transaction.",
+      "question": "Which single metric would have caught this problem immediately, before anyone needed to inspect individual predictions?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Accuracy",
+          "is_correct": false,
+          "explanation": "This is exactly the metric that hid the problem. Because 99.6% of transactions are legitimate, a model that always predicts 'not fraud' still scores 99.6% accuracy - the metric is dominated by the majority class and says nothing about whether any fraud was ever caught."
+        },
+        {
+          "id": "b",
+          "text": "Precision-Recall AUC",
+          "is_correct": true,
+          "explanation": "Precision-Recall AUC focuses specifically on how well the model finds the positive (fraud) class, which is what actually matters here. A model that never predicts fraud would have zero recall and a PR-AUC near the baseline fraud rate, immediately exposing the problem that accuracy hid."
+        },
+        {
+          "id": "c",
+          "text": "ROC-AUC",
+          "is_correct": false,
+          "explanation": "ROC-AUC is a reasonable metric to also track, but with such extreme imbalance it can look deceptively good because the false-positive rate stays low even when recall on the tiny fraud class is poor - the large number of true negatives dominates. PR-AUC is more sensitive to performance specifically on the rare positive class."
+        },
+        {
+          "id": "d",
+          "text": "Mean squared error (MSE)",
+          "is_correct": false,
+          "explanation": "MSE is an error metric for continuous/regression predictions. Fraud detection here is a classification problem (fraud vs. not fraud), so MSE is not the natural fit, and it would not have flagged the all-negative model's failure any more clearly than accuracy would."
+        }
+      ],
+      "correct_option_id": "b",
+      "key_takeaway": "For severely imbalanced classification, accuracy is close to meaningless - its value is dominated by the majority class. Metrics that isolate performance on the minority/positive class (PR-AUC, recall, F1 at a chosen threshold) are what actually reveal whether the model is doing its job.",
+      "common_misconception": "Treating a single 'accuracy' number as sufficient evidence a classifier works, without checking the class distribution first.",
+      "experimentation": {
+        "objective": "Simulate a highly imbalanced fraud dataset, score a trivial 'always predict not-fraud' classifier, and compute accuracy vs. PR-AUC/recall side by side to see how differently they score the same (useless) model.",
+        "data_generation_code": "import numpy as np\nfrom sklearn.datasets import make_classification\n\nX, y = make_classification(\n    n_samples=100_000,\n    n_features=10,\n    weights=[0.996, 0.004],   # ~0.4% fraud, matches the scenario\n    flip_y=0.01,\n    random_state=42,\n)\n\n# Try it yourself:\n# from sklearn.metrics import accuracy_score, average_precision_score, roc_auc_score\n# y_pred_naive = np.zeros_like(y)  # \"always predict not-fraud\"\n# accuracy_score(y, y_pred_naive)\n# average_precision_score(y, y_pred_naive)   # PR-AUC style score\n",
+        "suggested_exploration": "Compute accuracy for the naive all-zero classifier, then compute recall and PR-AUC for the same predictions. Then try scoring a real (if simple) classifier trained on X, y and compare all metrics."
+      }
+    },
+    {
+      "id": "cs-03",
+      "title": "Mansions Skewing the House-Price Model",
+      "topics": [
+        "regression-metrics",
+        "outliers"
+      ],
+      "difficulty": "beginner",
+      "scenario": "A real-estate analyst builds a regression model to predict house prices in a suburb where most homes sell between $200K and $500K. The dataset includes three multi-million-dollar mansions recently sold in the area. The analyst wants an error metric that reflects how good the model is for a 'typical' home, without letting the mansions dominate the score.",
+      "question": "Which metric best fits the analyst's goal?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Mean Squared Error (MSE)",
+          "is_correct": false,
+          "explanation": "MSE squares each residual, so an error on one of the multi-million-dollar mansions (likely large in absolute dollars) gets squared and can dominate the total, even if the model fits the typical $200K-$500K homes well. This works directly against the analyst's goal."
+        },
+        {
+          "id": "b",
+          "text": "Root Mean Squared Error (RMSE)",
+          "is_correct": false,
+          "explanation": "RMSE is just the square root of MSE, so it inherits the same sensitivity to squared residuals - a few large errors on the mansions still disproportionately drive the score up relative to how the model performs on typical homes."
+        },
+        {
+          "id": "c",
+          "text": "Mean Absolute Error (MAE)",
+          "is_correct": true,
+          "explanation": "MAE averages the absolute value of each residual instead of squaring it, so a large error on a mansion contributes proportionally rather than being amplified. This makes MAE a more faithful reflection of typical prediction error for the bulk of ordinary homes."
+        },
+        {
+          "id": "d",
+          "text": "R-squared (R²)",
+          "is_correct": false,
+          "explanation": "R² measures the proportion of variance explained relative to a baseline (predicting the mean), not the typical size of the prediction error in dollars. It is also sensitive to the mansions in a different way: a few extreme values can inflate total variance and change R² without telling the analyst anything about typical-home accuracy."
+        }
+      ],
+      "correct_option_id": "c",
+      "key_takeaway": "MSE/RMSE penalize large errors quadratically, so they are the wrong choice when a few outliers should not dominate the evaluation. MAE treats every unit of error equally, which better reflects 'typical' performance.",
+      "common_misconception": "Reaching for RMSE by default because it is in the same units as the target, without checking whether outliers in the target variable will distort it.",
+      "experimentation": {
+        "objective": "Build a synthetic housing dataset with three extreme high-price outliers, evaluate the same model predictions with MSE/RMSE vs. MAE, and see how much the outliers move each one.",
+        "data_generation_code": "import numpy as np\n\nrng = np.random.default_rng(7)\n\nn = 200\nsqft = rng.normal(1800, 300, n)\nprice = 150 * sqft + rng.normal(0, 20000, n)   # typical homes, ~$200K-$500K\n\n# add 3 mansion outliers\nsqft = np.append(sqft, [9000, 10500, 12000])\nprice = np.append(price, [4_800_000, 5_500_000, 6_200_000])\n\n# pretend model predictions (decent on typical homes, noticeably off on mansions)\ny_pred = 150 * sqft + rng.normal(0, 20000, size=sqft.shape)\n\n# Try it yourself:\n# from sklearn.metrics import mean_squared_error, mean_absolute_error\n# rmse = np.sqrt(mean_squared_error(price, y_pred))\n# mae = mean_absolute_error(price, y_pred)\n",
+        "suggested_exploration": "Compute RMSE and MAE on the full dataset, then recompute both after removing the 3 mansions, and compare how much each metric shifts."
+      }
+    },
+    {
+      "id": "cs-04",
+      "title": "Comparing Recovery Time Across Two Small, Skewed Groups",
+      "topics": [
+        "hypothesis-testing",
+        "non-parametric-tests"
+      ],
+      "difficulty": "intermediate",
+      "scenario": "A clinical researcher compares recovery time (in days) between two independent groups of patients - 12 on a new drug, 12 on the standard treatment. A histogram of the pooled recovery times is strongly right-skewed (most patients recover quickly, a few take much longer), and each group has fewer than 15 patients.",
+      "question": "Which test is the most appropriate way to compare recovery time between the two groups?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Independent-samples t-test",
+          "is_correct": false,
+          "explanation": "The independent-samples t-test assumes the underlying data (or at least the sampling distribution of the mean) is approximately normal, and this assumption is most fragile with small samples. With only 12 patients per group and a strongly right-skewed distribution, the t-test's p-value cannot be trusted here."
+        },
+        {
+          "id": "b",
+          "text": "Mann-Whitney U test",
+          "is_correct": true,
+          "explanation": "The Mann-Whitney U test compares the two groups based on ranks rather than raw values, so it does not require normality and is robust to the skew. It is designed exactly for comparing two independent groups with small or non-normal samples."
+        },
+        {
+          "id": "c",
+          "text": "Paired t-test",
+          "is_correct": false,
+          "explanation": "A paired t-test is for two measurements taken on the same subjects (e.g., before/after), where each observation in one group is linked to a specific observation in the other. These are two independent groups of different patients, so there is no natural pairing to exploit."
+        },
+        {
+          "id": "d",
+          "text": "Chi-square test of independence",
+          "is_correct": false,
+          "explanation": "Chi-square tests are for categorical data (comparing proportions/frequencies across categories), not continuous measurements like recovery time in days. Recovery time would need to be converted into categories to use this test, throwing away information the researcher already has."
+        }
+      ],
+      "correct_option_id": "b",
+      "key_takeaway": "When sample sizes are small and the data is visibly skewed, do not default to the t-test just because it is the most familiar comparison test - a rank-based non-parametric alternative like Mann-Whitney U is more appropriate when normality cannot be assumed.",
+      "common_misconception": "Assuming the Central Limit Theorem 'rescues' any comparison of means regardless of sample size - with n=12 per group, it does not reliably do so for a strongly skewed distribution.",
+      "experimentation": {
+        "objective": "Generate two independent right-skewed samples, run both a t-test and a Mann-Whitney U test on them, and compare the p-values - then repeat with much larger samples to see the tests converge.",
+        "data_generation_code": "import numpy as np\n\nrng = np.random.default_rng(11)\n\n# right-skewed recovery times (days), small samples\ngroup_new_drug = rng.gamma(shape=2.0, scale=3.0, size=12)\ngroup_standard = rng.gamma(shape=2.0, scale=4.0, size=12)\n\n# Try it yourself:\n# from scipy.stats import ttest_ind, mannwhitneyu\n# ttest_ind(group_new_drug, group_standard)\n# mannwhitneyu(group_new_drug, group_standard)\n",
+        "suggested_exploration": "Run both tests on the n=12 samples and compare p-values, then regenerate the same two groups with size=200 each and re-run both tests to see how much closer they agree at larger sample sizes."
+      }
+    },
+    {
+      "id": "cs-05",
+      "title": "The Coefficient That Keeps Flipping Sign",
+      "topics": [
+        "regression-diagnostics",
+        "multicollinearity"
+      ],
+      "difficulty": "advanced",
+      "scenario": "An agricultural scientist fits a linear regression predicting crop yield from rainfall, average temperature, and humidity. When she refits the model on slightly different bootstrap resamples of the same data, the coefficient for humidity flips from strongly positive to strongly negative across resamples, even though the model's overall predictions stay fairly stable. Rainfall and humidity are known to be closely related in this region.",
+      "question": "What is the most likely explanation for the unstable, sign-flipping humidity coefficient?",
+      "options": [
+        {
+          "id": "a",
+          "text": "The model is overfitting because there are too many features relative to the sample size",
+          "is_correct": false,
+          "explanation": "Three predictors is a modest number of features, and overfitting from too many parameters usually shows up as unstable predictions on new data, not specifically as a coefficient flipping sign while overall predictions stay stable. That specific symptom points elsewhere."
+        },
+        {
+          "id": "b",
+          "text": "Multicollinearity between rainfall and humidity is inflating the variance of their individual coefficient estimates",
+          "is_correct": true,
+          "explanation": "When two predictors are highly correlated, the regression has trouble attributing the shared effect to one variable versus the other - the individual coefficients become highly sensitive to small changes in the data (like a different bootstrap sample) even though the model's combined prediction stays stable. A sign-flipping coefficient alongside stable predictions is a classic multicollinearity signature."
+        },
+        {
+          "id": "c",
+          "text": "The target variable (crop yield) needs a log transformation",
+          "is_correct": false,
+          "explanation": "A skewed target can cause other issues (like non-normal residuals or heteroscedasticity), but it does not specifically explain why one coefficient's sign becomes unstable across resamples while predictions stay consistent - that pattern points to a relationship between predictors, not the shape of the target."
+        },
+        {
+          "id": "d",
+          "text": "The sample size is too small to estimate three coefficients reliably",
+          "is_correct": false,
+          "explanation": "If sample size alone were the issue, you would expect noisier estimates across the board, not a specific pattern involving two particular variables (rainfall and humidity) while predictions remain stable. The scientist needs to check the correlation between predictors specifically, not just add more data."
+        }
+      ],
+      "correct_option_id": "b",
+      "key_takeaway": "When individual coefficients are unstable but overall model predictions are not, check for multicollinearity (e.g., via a correlation matrix or variance inflation factor) before assuming the problem is sample size or model complexity.",
+      "common_misconception": "Treating any instability in a model as generic 'overfitting' and reaching for regularization or more data, without diagnosing whether the actual cause is correlated predictors.",
+      "experimentation": {
+        "objective": "Generate rainfall and humidity as correlated variables, fit a regression across several bootstrap resamples, and watch the humidity coefficient's sign and magnitude shift.",
+        "data_generation_code": "import numpy as np\n\nrng = np.random.default_rng(3)\n\nn = 60\nrainfall = rng.normal(100, 15, n)\nhumidity = 0.85 * rainfall + rng.normal(0, 8, n)     # strongly correlated with rainfall\ntemperature = rng.normal(25, 3, n)\n\nyield_ = (0.4 * rainfall + 0.1 * humidity + 0.6 * temperature\n          + rng.normal(0, 5, n))\n\n# Try it yourself:\n# from numpy.linalg import lstsq\n# X = np.column_stack([rainfall, humidity, temperature, np.ones(n)])\n# for seed in range(5):\n#     idx = np.random.default_rng(seed).choice(n, n, replace=True)  # bootstrap resample\n#     coef, *_ = lstsq(X[idx], yield_[idx], rcond=None)\n#     print(coef)  # watch the humidity coefficient (2nd value) change sign/magnitude\n",
+        "suggested_exploration": "Run the bootstrap loop above and print the humidity coefficient each time. Then compute the correlation between rainfall and humidity directly, and compare a model with humidity dropped against the original three-variable model to see how little the predictions change."
+      }
+    },
+    {
+      "id": "cs-06",
+      "title": "99% Accuracy That Wasn't Real",
+      "topics": [
+        "model-evaluation",
+        "overfitting"
+      ],
+      "difficulty": "beginner",
+      "scenario": "A student trains a decision tree with no depth limit on their entire dataset, achieves 99% accuracy, and reports this number as the model's performance in their project report. When the model is later run on new, unseen customer data in a demo, it performs barely better than random guessing.",
+      "question": "What evaluation step, if done before reporting the 99% number, would most likely have caught this problem?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Training a bigger, deeper tree to push accuracy even higher",
+          "is_correct": false,
+          "explanation": "This would likely make the problem worse, not better - an even deeper, more flexible tree memorizes the training data even further, which is precisely the failure mode already occurring here."
+        },
+        {
+          "id": "b",
+          "text": "Evaluating the model on a held-out validation or test set the tree never saw during training",
+          "is_correct": true,
+          "explanation": "The 99% figure was measured on the exact data the tree was allowed to memorize, including its noise and idiosyncrasies - an unlimited-depth decision tree can essentially memorize the training set. A held-out set the model never saw would have exposed the gap between memorization and genuine generalization immediately."
+        },
+        {
+          "id": "c",
+          "text": "Collecting more training data without changing the evaluation process",
+          "is_correct": false,
+          "explanation": "More data can help a model generalize better, but if the evaluation is still measured on data the model was trained on, the reported accuracy will still be optimistic and will not reveal the true generalization gap."
+        },
+        {
+          "id": "d",
+          "text": "Removing all features and retraining",
+          "is_correct": false,
+          "explanation": "Removing all features would leave nothing for the tree to learn from at all. The issue here is not which features were used - it is that performance was measured on the same data used for training, which does not reveal the model's ability to generalize."
+        }
+      ],
+      "correct_option_id": "b",
+      "key_takeaway": "Any performance number measured on the same data a model was trained on should be treated as an upper bound on true performance, not a reliable estimate. A held-out validation/test set (or cross-validation) is the minimum bar for a trustworthy metric.",
+      "common_misconception": "Believing a high accuracy number is meaningful on its own, without asking what data it was measured against.",
+      "experimentation": {
+        "objective": "Train an unconstrained decision tree on a synthetic dataset, compare accuracy on the training set itself vs. a held-out test set, and see the gap directly.",
+        "data_generation_code": "import numpy as np\nfrom sklearn.datasets import make_classification\nfrom sklearn.model_selection import train_test_split\n\nX, y = make_classification(n_samples=300, n_features=15, n_informative=4,\n                            n_redundant=2, flip_y=0.15, random_state=5)\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=5)\n\n# Try it yourself:\n# from sklearn.tree import DecisionTreeClassifier\n# tree = DecisionTreeClassifier(random_state=5)  # no depth limit\n# tree.fit(X_train, y_train)\n# tree.score(X_train, y_train)   # accuracy on data it memorized\n# tree.score(X_test, y_test)     # accuracy on data it never saw\n",
+        "suggested_exploration": "Compare train-set accuracy vs. test-set accuracy for the unconstrained tree, then set max_depth=3 and compare the same two numbers to see the gap shrink."
+      }
+    },
+    {
+      "id": "cs-07",
+      "title": "The Hospital With the 'Worse' Mortality Rate",
+      "topics": [
+        "causal-inference",
+        "confounding-variables"
+      ],
+      "difficulty": "advanced",
+      "scenario": "A health-policy analyst compares two hospitals: Hospital A has a 6% overall patient mortality rate, and Hospital B has a 4% overall mortality rate. Based on this, a news article concludes Hospital B provides better care. However, Hospital A is a major trauma center that treats a much higher proportion of critically ill and high-risk patients than Hospital B.",
+      "question": "What should the analyst do before concluding that Hospital B provides better care?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Trust the raw mortality rates since both hospitals have large patient volumes",
+          "is_correct": false,
+          "explanation": "Large sample sizes make the raw percentages precise, but precision does not fix a comparison that ignores a major confounding variable. If Hospital A systematically treats sicker patients, its raw rate will look worse regardless of care quality, no matter how many patients are in each group."
+        },
+        {
+          "id": "b",
+          "text": "Stratify the comparison by patient risk/severity level before comparing mortality rates",
+          "is_correct": true,
+          "explanation": "This is a textbook Simpson's Paradox setup: patient severity is a confounding variable that affects both which hospital a patient goes to and their likelihood of dying, regardless of care quality. Comparing mortality rate within similar severity bands (e.g., high-risk patients at A vs. high-risk patients at B) can reveal a very different - sometimes opposite - conclusion than the raw aggregate rates."
+        },
+        {
+          "id": "c",
+          "text": "Compare only the average age of patients at each hospital",
+          "is_correct": false,
+          "explanation": "Age might be one relevant factor, but it is not necessarily the confounder driving the difference here - the scenario specifically flags patient severity/risk (trauma cases) as the key difference between the hospitals, not age specifically."
+        },
+        {
+          "id": "d",
+          "text": "Increase the sample size at Hospital B to match Hospital A",
+          "is_correct": false,
+          "explanation": "The problem is not that Hospital B's estimate is imprecise due to a small sample - it is that the two raw rates are not comparing like with like. Collecting more of the same kind of patients at Hospital B would not address the mismatch in patient severity between the two hospitals."
+        }
+      ],
+      "correct_option_id": "b",
+      "key_takeaway": "A raw comparison between groups can reverse or disappear once you control for a variable that is related to both the grouping and the outcome. Always ask what could differ between groups besides the thing you are trying to measure.",
+      "common_misconception": "Treating an aggregate statistic as automatically representative of every subgroup within it - this is the essence of Simpson's Paradox.",
+      "experimentation": {
+        "objective": "Build a synthetic dataset where a hospital's raw mortality rate looks worse only because of patient mix, then stratify by severity to see the conclusion reverse.",
+        "data_generation_code": "import numpy as np\nimport pandas as pd\n\nrng = np.random.default_rng(21)\n\n# Hospital A: mostly high-risk patients; Hospital B: mostly low-risk patients\nhospital_a = pd.DataFrame({\n    \"severity\": rng.choice([\"high\", \"low\"], size=1000, p=[0.7, 0.3]),\n})\nhospital_b = pd.DataFrame({\n    \"severity\": rng.choice([\"high\", \"low\"], size=1000, p=[0.2, 0.8]),\n})\n\n# true mortality rates are actually BETTER at Hospital A within each severity group\nmortality_rate = {\"high\": {\"a\": 0.10, \"b\": 0.14}, \"low\": {\"a\": 0.01, \"b\": 0.02}}\n\nhospital_a[\"died\"] = hospital_a[\"severity\"].map(\n    lambda s: rng.random() < mortality_rate[s][\"a\"])\nhospital_b[\"died\"] = hospital_b[\"severity\"].map(\n    lambda s: rng.random() < mortality_rate[s][\"b\"])\n\n# Try it yourself:\n# hospital_a[\"died\"].mean(), hospital_b[\"died\"].mean()          # raw rates\n# hospital_a.groupby(\"severity\")[\"died\"].mean()                  # stratified\n# hospital_b.groupby(\"severity\")[\"died\"].mean()\n",
+        "suggested_exploration": "Compute the raw overall mortality rate for each hospital first, then group by severity and compare within each severity band - see the conclusion flip."
+      }
+    },
+    {
+      "id": "cs-08",
+      "title": "Stopping the A/B Test Early",
+      "topics": [
+        "experimental-design",
+        "ab-testing"
+      ],
+      "difficulty": "intermediate",
+      "scenario": "A product team launches an A/B test comparing a new checkout button color, planned to run for 14 days to reach the pre-calculated sample size. On day 3, someone checks the p-value out of curiosity and sees p = 0.04. Excited, the team immediately stops the test and ships the new button as the winner.",
+      "question": "What is the main statistical problem with this decision?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Nothing is wrong - a p-value below 0.05 is a p-value below 0.05 regardless of when it is observed",
+          "is_correct": false,
+          "explanation": "The 0.05 threshold assumes you looked at the data once, at a pre-specified sample size. Checking repeatedly and stopping the moment the p-value crosses 0.05 changes the actual probability of a false positive - it is no longer 5%."
+        },
+        {
+          "id": "b",
+          "text": "Repeatedly checking the p-value and stopping as soon as it looks significant inflates the true false-positive rate above the intended 5% (the 'peeking problem')",
+          "is_correct": true,
+          "explanation": "Random fluctuation alone will cause the p-value to dip below 0.05 at some point during a multi-day test a good portion of the time, purely by chance, even when there is no real effect. Stopping the instant that happens - rather than waiting for the pre-planned sample size - means the test is far more likely to declare a 'winner' that is actually noise."
+        },
+        {
+          "id": "c",
+          "text": "The effect size of the button color change is too small to matter",
+          "is_correct": false,
+          "explanation": "This might or might not be true, but it is not the statistical flaw in the team's process - the problem is the decision rule (stop as soon as p < 0.05 is observed), which would inflate the false-positive rate even for a real, meaningful effect."
+        },
+        {
+          "id": "d",
+          "text": "They should have used a chi-square test instead of whatever test produced the p-value",
+          "is_correct": false,
+          "explanation": "Swapping to a different test does not address the underlying issue. Any significance test used this way - checked repeatedly with stopping as soon as it crosses the threshold - suffers from the same inflated false-positive problem."
+        }
+      ],
+      "correct_option_id": "b",
+      "key_takeaway": "A p-value threshold is only valid at the sample size and check frequency it was designed for. Peeking at results and stopping early the moment they look favorable is one of the most common ways A/B tests generate false 'winners.'",
+      "common_misconception": "Believing p < 0.05 means the same thing regardless of how many times you checked or when you decided to stop looking.",
+      "experimentation": {
+        "objective": "Simulate many A/B tests where there is truly no difference between groups, checking the p-value daily and stopping at the first p < 0.05, and measure how often that produces a false 'significant' result compared to checking only once at the end.",
+        "data_generation_code": "import numpy as np\nfrom scipy.stats import ttest_ind\n\nrng = np.random.default_rng(99)\n\ndef simulate_one_test(days=14, daily_n=50):\n    # no real difference between groups -- same distribution for both\n    group_a, group_b = [], []\n    false_positive_from_peeking = False\n    for day in range(1, days + 1):\n        group_a.extend(rng.normal(0, 1, daily_n))\n        group_b.extend(rng.normal(0, 1, daily_n))\n        _, p = ttest_ind(group_a, group_b)\n        if p < 0.05:\n            false_positive_from_peeking = True\n            break\n    _, final_p = ttest_ind(group_a, group_b)\n    return false_positive_from_peeking, final_p < 0.05\n\n# Try it yourself:\n# results = [simulate_one_test() for _ in range(500)]\n# peeking_false_positive_rate = np.mean([r[0] for r in results])\n# fixed_sample_false_positive_rate = np.mean([r[1] for r in results])\n",
+        "suggested_exploration": "Run the simulation across 500 fake experiments (where there is truly no effect) and compare the false-positive rate from 'peek and stop early' against the false-positive rate from waiting for the full 14 days."
+      }
+    },
+    {
+      "id": "cs-09",
+      "title": "Segmenting a Curved Customer Cluster",
+      "topics": [
+        "unsupervised-learning",
+        "clustering"
+      ],
+      "difficulty": "intermediate",
+      "scenario": "A marketing analyst wants to segment customers based on two behavioral features. A scatterplot of the data shows one dense, roughly circular blob of casual customers, and a second group of high-value customers forming a long, curved, sparser band running along the edge of the plot - plus a handful of clearly anomalous customers scattered far from both groups.",
+      "question": "Which clustering approach is best suited to this data?",
+      "options": [
+        {
+          "id": "a",
+          "text": "K-means with k=2",
+          "is_correct": false,
+          "explanation": "K-means assumes clusters are roughly spherical and similar in density, and it assigns every point to some cluster. The curved, elongated band of high-value customers is not spherical, and K-means would likely split it unnaturally or blend it with the other group - and it would forcibly assign the anomalous customers to one of the two clusters instead of flagging them as unusual."
+        },
+        {
+          "id": "b",
+          "text": "DBSCAN (density-based clustering)",
+          "is_correct": true,
+          "explanation": "DBSCAN groups points based on local density and does not assume any particular cluster shape, so it can follow the curved band of high-value customers as its own cluster while still separating the dense circular blob. It also naturally labels the scattered anomalous customers as noise/outliers instead of forcing them into a cluster."
+        },
+        {
+          "id": "c",
+          "text": "Hierarchical clustering with complete linkage, cut into 2 clusters",
+          "is_correct": false,
+          "explanation": "Complete linkage tends to produce compact, roughly spherical clusters (similar bias to K-means) and struggles with elongated, curved shapes. It also has no built-in concept of 'noise' - the anomalous customers would be forced into whichever cluster is nearest, distorting the true segments."
+        },
+        {
+          "id": "d",
+          "text": "Manually setting a fixed cluster count of 2 and assigning by nearest centroid",
+          "is_correct": false,
+          "explanation": "This describes essentially the same approach as K-means and inherits the same problems: it cannot represent a curved/elongated cluster shape well and has no mechanism for treating clear outliers separately from the two main groups."
+        }
+      ],
+      "correct_option_id": "b",
+      "key_takeaway": "The right clustering algorithm depends on the shape and density of the clusters in the data, not just how many groups you expect. Density-based methods like DBSCAN handle non-spherical shapes and noisy outliers far better than centroid-based methods like K-means.",
+      "common_misconception": "Reaching for K-means as the default clustering algorithm without first visualizing whether the data's clusters are actually spherical and similarly sized.",
+      "experimentation": {
+        "objective": "Generate a dataset with one circular blob, one curved/elongated cluster, and a few noise points, then cluster it with both K-means and DBSCAN and compare how each one handles the curved cluster and the outliers.",
+        "data_generation_code": "import numpy as np\n\nrng = np.random.default_rng(15)\n\n# dense circular blob\nblob = rng.normal(loc=[0, 0], scale=0.5, size=(150, 2))\n\n# curved band cluster (a noisy arc)\ntheta = np.linspace(0, np.pi, 150)\narc = np.column_stack([3 * np.cos(theta), 3 * np.sin(theta)]) + rng.normal(0, 0.15, (150, 2))\narc += [4, 0]\n\n# a few anomalous/noise points scattered far away\nnoise = rng.uniform(-8, 8, size=(8, 2))\n\nX = np.vstack([blob, arc, noise])\n\n# Try it yourself:\n# from sklearn.cluster import KMeans, DBSCAN\n# kmeans_labels = KMeans(n_clusters=2, random_state=0, n_init=10).fit_predict(X)\n# dbscan_labels = DBSCAN(eps=0.6, min_samples=5).fit_predict(X)  # -1 = noise\n",
+        "suggested_exploration": "Plot X colored by kmeans_labels, then plot it again colored by dbscan_labels, and see which one actually separates the curved cluster from the blob and which one correctly flags the 8 outliers as noise."
+      }
+    },
+    {
+      "id": "cs-10",
+      "title": "The Forecast That Looked Great Until It Wasn't",
+      "topics": [
+        "data-leakage",
+        "time-series",
+        "model-evaluation"
+      ],
+      "difficulty": "advanced",
+      "scenario": "A data scientist builds a model to predict next-month retail sales using historical monthly data spanning 5 years. They randomly shuffle all the rows and split 80% into training and 20% into a test set, using scikit-learn's default train_test_split. Cross-validated performance looks excellent - but when the model is deployed to actually forecast the next real month, its predictions are far worse than during testing.",
+      "question": "What is the most likely cause of the mismatch between test performance and real-world performance?",
+      "options": [
+        {
+          "id": "a",
+          "text": "The model needs more features to forecast well in production",
+          "is_correct": false,
+          "explanation": "Adding features might help forecasting in general, but it does not explain the specific mismatch between a strong test score and poor real-world performance - that gap points to a flaw in how the test score was measured, not a lack of predictive signal."
+        },
+        {
+          "id": "b",
+          "text": "Random shuffling before splitting let information from the future leak into the training set, inflating the test score (data leakage)",
+          "is_correct": true,
+          "explanation": "With time-ordered data, a random shuffle means some training examples come from months after some test examples. Sales trends, seasonality, and macro conditions carry over from month to month, so the model can effectively 'see the future' relative to some test points during training - something impossible in real deployment, where only the past is ever available. That is why the test score looked far better than real-world forecasting performance."
+        },
+        {
+          "id": "c",
+          "text": "The model architecture is too simple for the data",
+          "is_correct": false,
+          "explanation": "A too-simple model would usually show up as mediocre performance on the test set itself, not as a large, specific gap between test performance and true forecast performance in deployment. The gap described here is a classic signature of information leaking across the train/test boundary, not underfitting."
+        },
+        {
+          "id": "d",
+          "text": "The target variable should have been normalized before training",
+          "is_correct": false,
+          "explanation": "Normalization affects the scale the model trains on, but it would not explain why performance measured on a random shuffled split looks so much better than performance on genuinely future, unseen data - that specific pattern points to how the split itself was constructed."
+        }
+      ],
+      "correct_option_id": "b",
+      "key_takeaway": "For time-ordered data, a random train/test split can leak future information into training and produce a test score that does not reflect real forecasting ability. Always split chronologically (train on the past, test on a later period) for time series.",
+      "common_misconception": "Treating train_test_split's default shuffling as safe for any dataset, without considering whether the rows have a time order that a model should not be allowed to see across.",
+      "experimentation": {
+        "objective": "Build a time-series dataset with a trend, compare performance from a random shuffled split vs. a chronological split, and see how much more optimistic the shuffled version looks.",
+        "data_generation_code": "import numpy as np\n\nrng = np.random.default_rng(30)\n\nmonths = np.arange(60)                       # 5 years of monthly data\ntrend = 1000 + 15 * months                    # upward trend over time\nseasonality = 200 * np.sin(2 * np.pi * months / 12)\nsales = trend + seasonality + rng.normal(0, 50, size=months.shape)\n\nX = months.reshape(-1, 1)\ny = sales\n\n# Try it yourself:\n# from sklearn.model_selection import train_test_split\n# from sklearn.linear_model import LinearRegression\n#\n# # (A) random shuffled split -- leaks future info into training\n# X_train_r, X_test_r, y_train_r, y_test_r = train_test_split(X, y, test_size=0.2, random_state=1)\n#\n# # (B) chronological split -- train on the past, test on the most recent months\n# split_point = int(len(X) * 0.8)\n# X_train_c, X_test_c = X[:split_point], X[split_point:]\n# y_train_c, y_test_c = y[:split_point], y[split_point:]\n#\n# model_r = LinearRegression().fit(X_train_r, y_train_r)\n# model_c = LinearRegression().fit(X_train_c, y_train_c)\n# model_r.score(X_test_r, y_test_r), model_c.score(X_test_c, y_test_c)\n",
+        "suggested_exploration": "Fit and score a model under both splitting strategies and compare the R² scores - then imagine deploying each model to forecast month 61, which never appeared in either training set, and think about which test score you would actually trust."
+      }
+    }
+  ]
+}

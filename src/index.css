@@ -1,0 +1,163 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-bg: #0a0a0f;
+    --color-surface: #12121a;
+    --color-surface-2: #1a1a26;
+    --color-border: #2a2a3d;
+    --color-text: #e8e8f0;
+    --color-text-muted: #8888a8;
+    --color-accent: #7c6af7;
+    --color-accent-glow: rgba(124, 106, 247, 0.25);
+    --color-beginner: #34d399;
+    --color-intermediate: #fbbf24;
+    --color-advanced: #f87171;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: "Inter", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  ::selection {
+    background: var(--color-accent-glow);
+    color: #fff;
+  }
+}
+
+@layer components {
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 1rem;
+    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  }
+
+  .card:hover {
+    border-color: var(--color-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 0 24px var(--color-accent-glow);
+  }
+
+  .badge-beginner {
+    background: rgba(52, 211, 153, 0.12);
+    color: var(--color-beginner);
+    border: 1px solid rgba(52, 211, 153, 0.3);
+  }
+
+  .badge-intermediate {
+    background: rgba(251, 191, 36, 0.12);
+    color: var(--color-intermediate);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+  }
+
+  .badge-advanced {
+    background: rgba(248, 113, 113, 0.12);
+    color: var(--color-advanced);
+    border: 1px solid rgba(248, 113, 113, 0.3);
+  }
+
+  .topic-chip {
+    background: rgba(124, 106, 247, 0.1);
+    color: #a99ff5;
+    border: 1px solid rgba(124, 106, 247, 0.2);
+    border-radius: 9999px;
+    padding: 0.15rem 0.65rem;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .btn-primary {
+    background: var(--color-accent);
+    color: #fff;
+    font-weight: 600;
+    border-radius: 0.6rem;
+    padding: 0.55rem 1.25rem;
+    transition: opacity 0.15s, transform 0.15s, box-shadow 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .btn-primary:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px var(--color-accent-glow);
+  }
+
+  .option-card {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+    transition: border-color 0.15s, background 0.15s;
+    cursor: default;
+  }
+
+  /* Pre-submit: hoverable, clickable */
+  .option-card-selectable {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    cursor: pointer;
+  }
+
+  .option-card-selectable:hover {
+    border-color: var(--color-accent);
+    background: rgba(124, 106, 247, 0.06);
+  }
+
+  .option-card-selectable.selected {
+    border-color: var(--color-accent);
+    background: rgba(124, 106, 247, 0.12);
+  }
+
+  /* Post-submit states */
+  .option-card-correct {
+    background: rgba(52, 211, 153, 0.08);
+    border: 1px solid rgba(52, 211, 153, 0.5);
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+  }
+
+  .option-card-wrong {
+    background: rgba(248, 113, 113, 0.06);
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+    opacity: 0.7;
+  }
+
+  .option-card-neutral {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+    opacity: 0.55;
+  }
+
+  /* Completion indicator on cards */
+  .completed-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: var(--color-beginner);
+    box-shadow: 0 0 6px var(--color-beginner);
+    flex-shrink: 0;
+  }
+}

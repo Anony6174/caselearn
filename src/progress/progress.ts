@@ -4,8 +4,11 @@ export type Confidence = "guess" | "somewhat" | "sure";
 
 export interface Attempt {
   itemId: string;
+  // What was answered: an option id, a typed prediction, or a written explanation.
   chosen: string;
   correct: boolean;
+  // Self-graded items: fraction of key points covered (0–1).
+  score?: number;
   confidence?: Confidence;
   ts: number; // epoch ms
 }
@@ -22,7 +25,7 @@ export type ItemStatus = "unseen" | "correct" | "incorrect" | "legacy";
 export const STATUS_LABEL: Record<ItemStatus, string> = {
   unseen: "Not attempted",
   correct: "Correct last time",
-  incorrect: "Wrong last time",
+  incorrect: "Needs review",
   legacy: "Completed (result not recorded)",
 };
 
@@ -41,6 +44,7 @@ function isAttempt(a: unknown): a is Attempt {
     typeof r.chosen === "string" &&
     typeof r.correct === "boolean" &&
     typeof r.ts === "number" &&
+    (r.score === undefined || (typeof r.score === "number" && r.score >= 0 && r.score <= 1)) &&
     (r.confidence === undefined || ["guess", "somewhat", "sure"].includes(r.confidence as string))
   );
 }

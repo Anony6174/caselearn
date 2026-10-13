@@ -1,0 +1,31 @@
+{
+  "id": "py-gil-001",
+  "type": "concept",
+  "track": "python",
+  "verified": false,
+  "title": "Why Threads Don't Speed Up Your Loop",
+  "topics": [
+    "concurrency",
+    "gil"
+  ],
+  "difficulty": "intermediate",
+  "prompt": "You split a CPU-heavy pure-Python loop across 4 threads on a 4-core machine, and it runs no faster (maybe slower). But using 4 threads to download 4 web pages *does* make that ~4× faster. Explain both results, and what you'd use instead for the CPU-bound case.",
+  "key_points": [
+    "CPython has a Global Interpreter Lock (GIL): only one thread executes Python bytecode at a time.",
+    "CPU-bound threads therefore take turns on one core; switching and lock contention can make it slower than one thread.",
+    "Blocking I/O (network, disk, `time.sleep`) releases the GIL, so I/O-bound threads overlap their waiting.",
+    "For CPU-bound work, use multiple processes (`multiprocessing` / `ProcessPoolExecutor`), or C extensions that release the GIL (e.g. NumPy)."
+  ],
+  "model_answer": "In standard CPython, a Global Interpreter Lock lets only one thread run Python bytecode at any moment; it protects things like reference counts from data races. Four threads running a pure-Python loop just take turns holding the GIL, so you get roughly one core of throughput plus the overhead of switching between them, often slightly *slower* than a single thread.\n\nDownloading is different: almost all the time is spent waiting on the network, and a thread waiting in a blocking system call releases the GIL. The four requests wait **concurrently**, so total time is about that of the slowest request, not the sum.\n\nFor CPU-bound work, use processes (`concurrent.futures.ProcessPoolExecutor` / `multiprocessing`): each has its own interpreter and its own GIL, so they really run in parallel, at the cost of pickling data between processes. Or push the hot loop into native code that releases the GIL (NumPy, Numba, Cython). For I/O-bound work with many connections, `asyncio` gives the same overlap on a single thread.\n\nNote: since Python 3.13 there is an optional *free-threaded* CPython build without the GIL, but the default build still has it.",
+  "follow_ups": [
+    "If only one thread runs at a time, why do you still need locks in multi-threaded Python code? (Hint: `count += 1` is several bytecodes.)",
+    "When would you choose `asyncio` over threads for I/O?",
+    "What's the cost of sending a large object to a worker process?"
+  ],
+  "sources": [
+    {
+      "title": "Python glossary: global interpreter lock",
+      "url": "https://docs.python.org/3/glossary.html#term-global-interpreter-lock"
+    }
+  ]
+}

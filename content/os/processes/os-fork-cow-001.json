@@ -1,0 +1,32 @@
+{
+  "id": "os-fork-cow-001",
+  "type": "concept",
+  "track": "os",
+  "verified": false,
+  "title": "Why fork() of a 4 GB Process Is Fast",
+  "topics": [
+    "processes",
+    "fork",
+    "copy-on-write"
+  ],
+  "difficulty": "intermediate",
+  "prompt": "`fork()` creates a child that is a copy of the parent. Yet forking a process using 4 GB of memory takes about a millisecond, not the seconds a 4 GB copy would need. How?",
+  "key_points": [
+    "Copy-on-write: fork copies the parent's page tables, not its memory; parent and child map the same physical frames.",
+    "The shared pages are marked read-only in both page tables.",
+    "When either process writes to a shared page, a page fault occurs and the kernel copies just that one page, giving the writer a private writable copy.",
+    "Fork's cost is proportional to the size of the page tables (and pages actually written later), not the memory size; with fork + exec the copy is mostly never needed."
+  ],
+  "model_answer": "Fork uses **copy-on-write**. Instead of copying 4 GB, the kernel duplicates the parent's page tables so the child maps the *same* physical frames, and marks those pages read-only in both processes (tracking a reference count per frame).\n\nAs long as both only read, they share memory and nothing is copied. When either one writes to a page, the CPU raises a protection fault. The kernel sees it's a COW page, allocates a new frame, copies that single 4 KB page, points the writer's PTE at the copy with write permission, and restarts the instruction.\n\nSo fork itself costs time proportional to the page tables (megabytes for gigabytes of memory), and copying happens lazily, per page, only for pages actually written. In the very common `fork()` + `exec()` pattern, the child replaces its address space almost immediately, so almost nothing is ever copied.",
+  "follow_ups": [
+    "Why can a fork-heavy server (e.g. Redis saving a snapshot) suddenly use almost double the memory?",
+    "What do `vfork()` and `posix_spawn()` avoid that even COW fork does?",
+    "What happens to a multi-threaded parent's other threads in the child?"
+  ],
+  "sources": [
+    {
+      "title": "OSTEP: Interlude: Process API",
+      "url": "https://pages.cs.wisc.edu/~remzi/OSTEP/cpu-api.pdf"
+    }
+  ]
+}

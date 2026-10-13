@@ -1,0 +1,27 @@
+{
+  "id": "py-default-001",
+  "type": "predict-output",
+  "track": "python",
+  "verified": false,
+  "title": "The Shared Default Bucket",
+  "topics": [
+    "functions",
+    "mutability"
+  ],
+  "difficulty": "beginner",
+  "language": "python",
+  "code": "def add(item, bucket=[]):\n    bucket.append(item)\n    return bucket\n\nprint(add(1))\nprint(add(2))\nprint(add(3, []))\nprint(add(4))",
+  "distractors": [
+    "[1]\n[2]\n[3]\n[4]",
+    "[1]\n[1, 2]\n[1, 2, 3]\n[1, 2, 3, 4]",
+    "[1]\n[1, 2]\n[3]\n[4]"
+  ],
+  "explanation": "Default values are evaluated **once**, when the `def` statement runs, not on every call. Every call that omits `bucket` gets the *same* list object, so it keeps growing: `[1]`, then `[1, 2]`.\n\n`add(3, [])` passes its own fresh list, so it doesn't touch the shared default. `add(4)` goes back to the shared list: `[1, 2, 4]`.\n\nThe fix:\n```\ndef add(item, bucket=None):\n    if bucket is None:\n        bucket = []\n```",
+  "try_this": "Print `add.__defaults__` after the calls. What do you see?",
+  "sources": [
+    {
+      "title": "Python FAQ: Why are default values shared between objects?",
+      "url": "https://docs.python.org/3/faq/programming.html#why-are-default-values-shared-between-objects"
+    }
+  ]
+}

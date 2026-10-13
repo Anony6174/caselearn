@@ -1,0 +1,33 @@
+{
+  "id": "os-pagefault-001",
+  "type": "concept",
+  "track": "os",
+  "verified": false,
+  "title": "Anatomy of a Page Fault",
+  "topics": [
+    "virtual-memory",
+    "paging",
+    "page-faults"
+  ],
+  "difficulty": "intermediate",
+  "prompt": "A program executes `x = arr[1000000];` and the page holding that element isn't in physical memory. Walk through everything that happens, from the instruction to the moment `x` gets its value.",
+  "key_points": [
+    "The MMU translates the virtual address, finds the page-table entry not present/valid, and raises a page-fault exception; the CPU traps into the kernel.",
+    "The kernel checks whether the address belongs to a valid region of the process (and whether the access is allowed); if not, it sends SIGSEGV.",
+    "For a valid address it gets a free physical frame, evicting a victim page if needed (writing it back first if it's dirty).",
+    "It fills the frame: reads the page from disk/swap or the mapped file (a major fault), or zero-fills / copies it (a minor fault, e.g. a first touch or copy-on-write).",
+    "It updates the page-table entry to point to the frame, then returns from the trap and the faulting instruction is re-executed, this time successfully."
+  ],
+  "model_answer": "1. **Translation fails.** The MMU walks the page table (or misses in the TLB and walks it) and finds the entry marked not-present. It raises a page-fault exception, and the CPU saves state and jumps to the kernel's handler, with the faulting address available (CR2 on x86).\n2. **Is the access legal?** The kernel looks up the address in the process's memory map (Linux: its VMAs). If it's outside every region, or e.g. a write to read-only memory, the process gets `SIGSEGV`.\n3. **Find a frame.** If no physical frame is free, the replacement policy picks a victim. A dirty victim is written back to swap or its file first, and its PTE is marked not-present.\n4. **Fill it.** If the page's contents are on disk, the kernel issues the I/O and the process sleeps until it completes (a *major* fault, milliseconds). If not, e.g. a first-touch anonymous page (zero-filled) or a copy-on-write page, it's a *minor* fault, microseconds.\n5. **Fix the mapping.** The PTE is set to the new frame with the present bit on.\n6. **Retry.** The trap returns to the *same* instruction, which runs again and now succeeds.\n\nThe program never knows any of this happened. That transparency is the whole point of virtual memory.",
+  "follow_ups": [
+    "Why is it essential that the faulting instruction can be restarted, and what makes that hard for some instructions?",
+    "What is thrashing, and how would you detect it?",
+    "Why does `malloc(1 GB)` return instantly on Linux, even with less free RAM than that?"
+  ],
+  "sources": [
+    {
+      "title": "OSTEP: Beyond Physical Memory: Mechanisms",
+      "url": "https://pages.cs.wisc.edu/~remzi/OSTEP/vm-beyondphys.pdf"
+    }
+  ]
+}

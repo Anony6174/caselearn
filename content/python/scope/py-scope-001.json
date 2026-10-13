@@ -1,0 +1,26 @@
+{
+  "id": "py-scope-001",
+  "type": "predict-output",
+  "track": "python",
+  "verified": false,
+  "title": "The Variable That Isn't There",
+  "topics": [
+    "scope",
+    "functions"
+  ],
+  "difficulty": "intermediate",
+  "language": "python",
+  "code": "count = 0\n\ndef increment():\n    try:\n        count += 1\n    except UnboundLocalError as e:\n        print(type(e).__name__)\n\nincrement()\nprint(count)",
+  "distractors": [
+    "1",
+    "NameError\n0",
+    "0"
+  ],
+  "explanation": "Python decides which names are local **at compile time**, per function. Because `increment` *assigns* to `count` (`+=` is an assignment), `count` is local everywhere in that function, even on the line before the assignment would happen.\n\nSo `count += 1` tries to read the local `count`, which has no value yet, and raises `UnboundLocalError` (a subclass of `NameError`). The global `count` is untouched and stays `0`.\n\nTo modify the global, declare `global count` inside the function. For an enclosing function's variable, use `nonlocal`. Better still, return the new value instead of mutating globals.",
+  "sources": [
+    {
+      "title": "Python FAQ: Why am I getting an UnboundLocalError?",
+      "url": "https://docs.python.org/3/faq/programming.html#why-am-i-getting-an-unboundlocalerror-when-the-variable-has-a-value"
+    }
+  ]
+}

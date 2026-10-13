@@ -1,0 +1,21 @@
+{
+  "id": "cpp-ref-001",
+  "type": "predict-output",
+  "track": "cpp",
+  "verified": false,
+  "title": "Value or Reference?",
+  "topics": [
+    "references",
+    "functions"
+  ],
+  "difficulty": "beginner",
+  "language": "cpp",
+  "code": "#include <iostream>\n\nvoid byValue(int x) { x += 10; }\nvoid byRef(int& x)  { x += 10; }\n\nint main() {\n    int a = 1;\n    byValue(a);\n    std::cout << a << '\\n';\n    byRef(a);\n    std::cout << a << '\\n';\n}",
+  "distractors": [
+    "11\n21",
+    "1\n1",
+    "11\n11"
+  ],
+  "explanation": "`byValue` gets its own copy of `a`. It changes the copy, which disappears when the function returns, so `a` is still `1`.\n\n`byRef` takes `int&`, a reference: `x` is just another name for `a` itself, so `x += 10` changes `a` to `11`.\n\nRule of thumb: pass by value for small types you don't want to change, by `const T&` for big types you only read, and by `T&` only when the function is *meant* to modify the caller's variable.",
+  "try_this": "Change `byValue` to take `const int& x`. Why does it no longer compile?"
+}

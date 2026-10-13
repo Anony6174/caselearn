@@ -1,4 +1,5 @@
-import type { Difficulty } from "../types/caseStudy";
+import { useState } from "react";
+import type { Difficulty } from "../content/schema";
 
 interface Props {
   allTopics: string[];
@@ -11,19 +12,12 @@ interface Props {
   totalCount: number;
 }
 
-const DIFFICULTIES: Array<{ value: Difficulty | "all"; label: string }> = [
-  { value: "all", label: "All levels" },
+const LEVELS: Array<{ value: Difficulty | "all"; label: string }> = [
+  { value: "all", label: "All" },
   { value: "beginner", label: "Beginner" },
   { value: "intermediate", label: "Intermediate" },
   { value: "advanced", label: "Advanced" },
 ];
-
-const difficultyColor: Record<string, string> = {
-  beginner: "var(--color-beginner)",
-  intermediate: "var(--color-intermediate)",
-  advanced: "var(--color-advanced)",
-  all: "var(--color-accent)",
-};
 
 export function FilterBar({
   allTopics,
@@ -35,74 +29,71 @@ export function FilterBar({
   activeCount,
   totalCount,
 }: Props) {
+  const [topicsOpen, setTopicsOpen] = useState(false);
   const hasFilters = selectedTopics.length > 0 || selectedDifficulty !== "all";
 
   return (
-    <div className="space-y-4 mb-8">
-      {/* Difficulty pills */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mr-1">
-          Level
-        </span>
-        {DIFFICULTIES.map(({ value, label }) => {
+    <div className="mb-10 space-y-4">
+      <div className="flex flex-wrap items-center gap-x-1 gap-y-2 border-b border-[var(--color-border)]">
+        {LEVELS.map(({ value, label }) => {
           const active = selectedDifficulty === value;
-          const color = difficultyColor[value];
           return (
             <button
               key={value}
               id={`filter-difficulty-${value}`}
               onClick={() => onDifficultyChange(value)}
-              className="px-3 py-1 rounded-full text-xs font-medium border transition-all duration-150"
-              style={{
-                borderColor: active ? color : "var(--color-border)",
-                background: active ? `color-mix(in srgb, ${color} 14%, transparent)` : "transparent",
-                color: active ? color : "var(--color-text-muted)",
-              }}
+              aria-pressed={active}
+              className={`-mb-px px-3 py-2 text-sm border-b-2 transition-colors ${
+                active
+                  ? "border-[var(--color-text)] text-[var(--color-text)]"
+                  : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+              }`}
             >
               {label}
             </button>
           );
         })}
+        <button
+          id="filter-topics-toggle"
+          onClick={() => setTopicsOpen((o) => !o)}
+          aria-expanded={topicsOpen}
+          className="ml-auto -mb-px px-3 py-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+        >
+          Topics{selectedTopics.length > 0 ? ` (${selectedTopics.length})` : ""} {topicsOpen ? "▴" : "▾"}
+        </button>
       </div>
 
-      {/* Topic chips */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mr-1">
-          Topic
-        </span>
-        {allTopics.map((topic) => {
-          const active = selectedTopics.includes(topic);
-          return (
-            <button
-              key={topic}
-              id={`filter-topic-${topic}`}
-              onClick={() => onTopicToggle(topic)}
-              className="px-3 py-1 rounded-full text-xs font-medium border transition-all duration-150"
-              style={{
-                borderColor: active ? "var(--color-accent)" : "var(--color-border)",
-                background: active ? "rgba(124,106,247,0.14)" : "transparent",
-                color: active ? "#a99ff5" : "var(--color-text-muted)",
-              }}
-            >
-              {topic}
-            </button>
-          );
-        })}
-      </div>
+      {topicsOpen && (
+        <div className="flex flex-wrap gap-1.5 animate-fade-in">
+          {allTopics.map((topic) => {
+            const active = selectedTopics.includes(topic);
+            return (
+              <button
+                key={topic}
+                id={`filter-topic-${topic}`}
+                onClick={() => onTopicToggle(topic)}
+                aria-pressed={active}
+                className={`chip transition-colors ${
+                  active
+                    ? "!bg-[var(--color-text)] !text-[var(--color-bg)]"
+                    : "hover:!text-[var(--color-text)]"
+                }`}
+              >
+                {topic}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
-      {/* Results summary + clear */}
       {hasFilters && (
-        <div className="flex items-center justify-between pt-1">
-          <p className="text-xs text-[var(--color-text-muted)]">
-            Showing <span className="text-[var(--color-text)] font-semibold">{activeCount}</span> of{" "}
-            <span className="text-[var(--color-text)] font-semibold">{totalCount}</span> case studies
+        <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)]">
+          <p>
+            Showing <span className="text-[var(--color-text)] tabular-nums">{activeCount}</span> of{" "}
+            <span className="tabular-nums">{totalCount}</span>
           </p>
-          <button
-            id="filter-clear-btn"
-            onClick={onClear}
-            className="text-xs text-[var(--color-accent)] hover:opacity-75 transition-opacity font-medium"
-          >
-            Clear filters ✕
+          <button id="filter-clear-btn" onClick={onClear} className="link">
+            Clear filters
           </button>
         </div>
       )}

@@ -1,0 +1,22 @@
+{
+  "id": "cpp-virtual-001",
+  "type": "predict-output",
+  "track": "cpp",
+  "verified": false,
+  "title": "Virtual, Non-virtual, Sliced",
+  "topics": [
+    "virtual-functions",
+    "inheritance",
+    "object-slicing"
+  ],
+  "difficulty": "intermediate",
+  "language": "cpp",
+  "code": "#include <iostream>\n#include <string>\n\nstruct Animal {\n    virtual std::string name() const { return \"Animal\"; }\n    std::string kind() const { return \"animal\"; }\n    virtual ~Animal() = default;\n};\n\nstruct Dog : Animal {\n    std::string name() const override { return \"Dog\"; }\n    std::string kind() const { return \"dog\"; }\n};\n\nvoid show(Animal a) { std::cout << a.name() << '\\n'; }\n\nint main() {\n    Dog d;\n    Animal* p = &d;\n    std::cout << p->name() << ' ' << p->kind() << '\\n';\n    show(d);\n}",
+  "distractors": [
+    "Dog dog\nDog",
+    "Dog animal\nDog",
+    "Animal animal\nAnimal"
+  ],
+  "explanation": "`p->name()`: `name` is virtual, so the call is dispatched on the *dynamic* type of the object (a `Dog`) through its vtable, giving `Dog`.\n\n`p->kind()`: `kind` is not virtual, so the compiler picks it from the *static* type of the pointer (`Animal*`), giving `animal`. `Dog::kind` hides it but doesn't override it.\n\n`show(d)` takes an `Animal` **by value**. Only the `Animal` part of `d` is copied into the parameter; this is called *object slicing*. The copy really is an `Animal` (with `Animal`'s vtable), so even the virtual call gives `Animal`. Pass polymorphic objects by reference or pointer.",
+  "try_this": "Change `show` to take `const Animal&`. What does it print now, and why?"
+}

@@ -1,0 +1,27 @@
+{
+  "id": "py-grid-001",
+  "type": "predict-output",
+  "track": "python",
+  "verified": false,
+  "title": "One Row, Three Times",
+  "topics": [
+    "mutability",
+    "lists"
+  ],
+  "difficulty": "beginner",
+  "language": "python",
+  "code": "grid = [[0] * 3] * 3\ngrid[0][0] = 1\nprint(grid)",
+  "distractors": [
+    "[[1, 0, 0], [0, 0, 0], [0, 0, 0]]",
+    "[[1, 1, 1], [0, 0, 0], [0, 0, 0]]",
+    "[[1, 1, 1], [1, 1, 1], [1, 1, 1]]"
+  ],
+  "explanation": "`[0] * 3` makes one list `[0, 0, 0]`. Multiplying the *outer* list by 3 copies the **reference** three times, so all three rows are the same list object. Changing `grid[0][0]` changes \"every\" row.\n\n(`[0] * 3` itself is fine, because ints are immutable: you can't change a 0 in place, only replace it.)\n\nCreate independent rows with a comprehension, which evaluates `[0] * 3` once per row:\n```\ngrid = [[0] * 3 for _ in range(3)]\n```",
+  "try_this": "Print `[id(row) for row in grid]` for both versions.",
+  "sources": [
+    {
+      "title": "Python FAQ: How do I create a multidimensional list?",
+      "url": "https://docs.python.org/3/faq/programming.html#how-do-i-create-a-multidimensional-list"
+    }
+  ]
+}

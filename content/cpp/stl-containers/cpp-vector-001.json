@@ -1,0 +1,28 @@
+{
+  "id": "cpp-vector-001",
+  "type": "predict-output",
+  "track": "cpp",
+  "verified": false,
+  "title": "How a Vector Grows",
+  "topics": [
+    "stl-containers",
+    "amortized-analysis"
+  ],
+  "difficulty": "intermediate",
+  "language": "cpp",
+  "prompt": "Built with g++ (libstdc++). Which capacities does this print?",
+  "code": "#include <iostream>\n#include <vector>\n\nint main() {\n    std::vector<int> v;\n    std::size_t last = v.capacity();\n    for (int i = 0; i < 20; ++i) {\n        v.push_back(i);\n        if (v.capacity() != last) {\n            last = v.capacity();\n            std::cout << last << ' ';\n        }\n    }\n    std::cout << '\\n';\n}",
+  "distractors": [
+    "1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20",
+    "10 20",
+    "1 2 3 4 6 9 13 19 28"
+  ],
+  "explanation": "libstdc++ doubles the capacity whenever the vector is full. Each reallocation allocates a new buffer, moves every element across, and frees the old one.\n\nWhy doubling: copying n elements is expensive, but it happens only after n cheap pushes. Total work for n pushes is about n + n/2 + n/4 + … < 2n, so `push_back` is **amortized O(1)**. Growing by a constant amount (say +10) instead would make n pushes cost O(n²).\n\nThe growth factor isn't fixed by the standard: MSVC grows by 1.5×, which would give the last option. If you know the final size, `v.reserve(n)` avoids all the reallocations.",
+  "try_this": "Add `v.reserve(20);` before the loop. How many lines of output now?",
+  "sources": [
+    {
+      "title": "cppreference: std::vector::push_back",
+      "url": "https://en.cppreference.com/w/cpp/container/vector/push_back"
+    }
+  ]
+}

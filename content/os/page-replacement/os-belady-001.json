@@ -1,0 +1,54 @@
+{
+  "id": "os-belady-001",
+  "type": "case-mcq",
+  "track": "os",
+  "verified": false,
+  "title": "More Memory, More Page Faults?",
+  "topics": [
+    "page-replacement",
+    "virtual-memory"
+  ],
+  "difficulty": "advanced",
+  "scenario": "An embedded team uses a FIFO page-replacement policy. While profiling, they replay the reference string 1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5 with 3 physical frames and count 9 page faults. They then give the process 4 frames, expecting fewer faults, and count 10.",
+  "question": "What explains this?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Belady's anomaly: under FIFO, adding frames can increase faults, because FIFO is not a stack algorithm.",
+      "is_correct": true,
+      "explanation": "With FIFO, the set of pages in memory with 4 frames is not necessarily a superset of the set with 3 frames, so for some reference strings more frames evict exactly the page needed next. This string is the textbook example: 9 faults with 3 frames, 10 with 4."
+    },
+    {
+      "id": "b",
+      "text": "Thrashing: with 4 frames the working set no longer fits in memory.",
+      "is_correct": false,
+      "explanation": "Thrashing happens when there are too *few* frames for the working set. Adding a frame can't make a working set stop fitting."
+    },
+    {
+      "id": "c",
+      "text": "This is expected for every replacement policy; LRU would show the same jump.",
+      "is_correct": false,
+      "explanation": "LRU (like OPT) is a stack algorithm: the pages held with n frames are always a subset of those held with n+1, so faults never increase. On this string LRU gives 10 faults with 3 frames and 8 with 4."
+    },
+    {
+      "id": "d",
+      "text": "A measurement error: in theory, faults can never go up when memory grows.",
+      "is_correct": false,
+      "explanation": "That's true for stack algorithms, but not in general. FIFO really does produce 10 faults here, and you can verify it in the sandbox."
+    }
+  ],
+  "correct_option_id": "a",
+  "key_takeaway": "Stack algorithms (LRU, OPT) can never fault more with more frames; FIFO can. That's one reason real systems approximate LRU (e.g. the clock algorithm) instead of using FIFO.",
+  "common_misconception": "\"More memory always means fewer page faults.\" It's true for LRU-like policies, but it is a property of the algorithm, not a law of nature.",
+  "experimentation": {
+    "objective": "Count FIFO and LRU faults for 1 to 5 frames and watch FIFO go the wrong way.",
+    "data_generation_code": "from collections import OrderedDict, deque\n\nrefs = [1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5]\n\ndef fifo_faults(refs, frames):\n    mem, faults = deque(), 0\n    for page in refs:\n        if page not in mem:\n            faults += 1\n            if len(mem) == frames:\n                mem.popleft()          # evict the oldest arrival\n            mem.append(page)\n    return faults\n\ndef lru_faults(refs, frames):\n    mem, faults = OrderedDict(), 0\n    for page in refs:\n        if page in mem:\n            mem.move_to_end(page)      # mark as most recently used\n        else:\n            faults += 1\n            if len(mem) == frames:\n                mem.popitem(last=False)  # evict the least recently used\n            mem[page] = True\n    return faults\n\nfor frames in range(1, 6):\n    print(f\"{frames} frames: FIFO={fifo_faults(refs, frames):2}  LRU={lru_faults(refs, frames):2}\")\n",
+    "suggested_exploration": "Generate random reference strings and search for other examples of Belady's anomaly. How rare are they? Can you ever find one for LRU?"
+  },
+  "sources": [
+    {
+      "title": "OSTEP: Beyond Physical Memory: Policies",
+      "url": "https://pages.cs.wisc.edu/~remzi/OSTEP/vm-beyondphys-policy.pdf"
+    }
+  ]
+}

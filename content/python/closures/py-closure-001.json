@@ -1,0 +1,26 @@
+{
+  "id": "py-closure-001",
+  "type": "predict-output",
+  "track": "python",
+  "verified": false,
+  "title": "Late-Binding Lambdas",
+  "topics": [
+    "closures",
+    "scope"
+  ],
+  "difficulty": "intermediate",
+  "language": "python",
+  "code": "fns = [lambda: i for i in range(3)]\nprint([f() for f in fns])\n\nfns = [lambda i=i: i for i in range(3)]\nprint([f() for f in fns])",
+  "distractors": [
+    "[0, 1, 2]\n[0, 1, 2]",
+    "[2, 2, 2]\n[2, 2, 2]",
+    "[0, 1, 2]\n[2, 2, 2]"
+  ],
+  "explanation": "A closure captures the **variable**, not its value at the time. All three lambdas refer to the same `i`, which is only looked up when the lambda is *called*. By then the loop has finished and `i` is `2`.\n\nIn the second version, `i=i` is a default argument, and defaults are evaluated when the lambda is *created*, so each lambda stores the current value.\n\n(Yes, this is the same \"defaults are evaluated once at definition time\" rule that causes the mutable-default-argument bug, used on purpose here.) `functools.partial` is another clean fix.",
+  "sources": [
+    {
+      "title": "Python FAQ: Why do lambdas defined in a loop all return the same result?",
+      "url": "https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "cpp-vdtor-001",
+  "type": "concept",
+  "track": "cpp",
+  "verified": false,
+  "title": "The Virtual Destructor Rule",
+  "topics": [
+    "virtual-functions",
+    "destructors",
+    "inheritance"
+  ],
+  "difficulty": "intermediate",
+  "prompt": "```\nstruct Base { ~Base() { /* ... */ } virtual void f(); };\nstruct Derived : Base { std::vector<int> data; };\n\nBase* p = new Derived;\ndelete p;\n```\nWhat goes wrong here, and what is the rule for when a destructor must be `virtual`?",
+  "key_points": [
+    "`delete p` calls the destructor of the *static* type (`Base`) unless the destructor is virtual.",
+    "So `~Derived` never runs, and `Derived`'s members (here the vector's heap buffer) are never released.",
+    "Formally, deleting a derived object through a base pointer without a virtual destructor is undefined behaviour, not just a leak.",
+    "Rule: if a class is meant to be deleted polymorphically (it has virtual functions / is a base class), give it a public virtual destructor. Otherwise make the destructor protected and non-virtual."
+  ],
+  "model_answer": "Without `virtual`, `delete p` is bound at compile time to `Base::~Base`, because `p` has static type `Base*`. `Derived::~Derived` never runs, so the `std::vector` member is never destroyed and its heap buffer leaks. More precisely, the standard says this is **undefined behaviour**: the leak is just the most common symptom.\n\nMaking `~Base` virtual puts the destructor in the vtable. `delete p` then dispatches to `~Derived`, which runs and then automatically calls `~Base`, the correct reverse order.\n\nThe guideline (Herb Sutter, C++ Core Guidelines C.35): a base class destructor should be either **public and virtual** (if you'll delete through a base pointer) or **protected and non-virtual** (if you won't, which stops anyone trying). Since `Base` already has a virtual function, it already has a vptr, so making the destructor virtual costs essentially nothing.",
+  "follow_ups": [
+    "Does `std::shared_ptr<Base> p = std::make_shared<Derived>();` have the same problem? Why not?",
+    "Does `std::unique_ptr<Base>` have the same problem?",
+    "What's in a vtable, and where is the vptr stored in an object?"
+  ],
+  "sources": [
+    {
+      "title": "cppreference: destructors",
+      "url": "https://en.cppreference.com/w/cpp/language/destructor"
+    }
+  ]
+}

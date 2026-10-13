@@ -197,7 +197,7 @@ before starting the next.
 - Progress v2: store attempts (`{itemId, chosen, correct, confidence, ts}`), migrate `caselearn_progress_v1`, add JSON export/import so progress can be backed up.
 - Deploy (Vercel/Netlify).
 
-**Phase 1 — Tracks + new question types**
+**Phase 1 — Tracks + new question types** — ✅ done
 - Routes: `/` tracks → `/t/:track` → `/item/:id`.
 - Renderers for `predict-output` and `concept` (self-grading checklist against `key_points`).
 - Build-time verification: the build script runs every `predict-output` snippet (local `python3` / `g++`) and writes `expected_output`. Answers are never typed by hand, so they can't be wrong.

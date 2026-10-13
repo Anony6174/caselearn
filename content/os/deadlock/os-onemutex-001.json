@@ -1,0 +1,32 @@
+{
+  "id": "os-onemutex-001",
+  "type": "concept",
+  "track": "os",
+  "verified": false,
+  "title": "Deadlock With Only One Mutex",
+  "topics": [
+    "deadlock",
+    "synchronization",
+    "locks"
+  ],
+  "difficulty": "intermediate",
+  "prompt": "The classic deadlock example uses two locks taken in opposite orders. Can a program deadlock if it has only **one** mutex? Give concrete ways it can happen, and what the general condition for deadlock is.",
+  "key_points": [
+    "Yes. A thread that locks a non-recursive mutex it already holds (e.g. a locked function calling another locked function) blocks on itself forever.",
+    "Holding the mutex while waiting on another thread that needs the same mutex: e.g. calling `join()` on, or waiting for a result from, a thread that must take the lock first.",
+    "Forgetting to unlock on some path (an early return or exception) leaves the mutex locked forever; RAII guards (`std::lock_guard`) prevent this.",
+    "The general condition is a cycle in the wait-for graph; the waits don't have to be on two locks. Joins, condition variables, channels and I/O count too."
+  ],
+  "model_answer": "Yes, several ways:\n\n1. **Self-deadlock.** `deposit()` locks `m` and calls `log_balance()`, which also locks `m`. Re-locking a normal (non-recursive) mutex you already hold blocks forever, because the thread is waiting for itself (for `std::mutex` it's formally undefined behaviour). A recursive mutex would allow this, but it usually means the locking design needs rethinking.\n2. **Lock plus another kind of wait.** Thread A holds `m` and calls `worker.join()`. The worker needs `m` to finish its work. A waits for the worker, and the worker waits for A's lock: a cycle with one lock and one join. The same happens with a future/promise, a condition variable waiting for an event only a lock-blocked thread can produce, or a bounded queue.\n3. **Never unlocked.** An exception or early `return` skips `m.unlock()`. Everyone else then waits forever. Strictly speaking that's a lock leak rather than a cycle, but it hangs the same way, and it's why RAII lock guards exist.\n\nThe general rule (Coffman conditions: mutual exclusion, hold-and-wait, no preemption, circular wait) is about a **cycle of waiting**, where the waits can be on anything: locks, joins, messages or I/O. Two locks in opposite orders is just the textbook example.",
+  "follow_ups": [
+    "How would you spot each of these in a stack dump of a hung process?",
+    "Why are callbacks invoked while holding a lock a common source of deadlocks?",
+    "How does `std::scoped_lock` avoid deadlock when taking several mutexes?"
+  ],
+  "sources": [
+    {
+      "title": "OSTEP: Common Concurrency Problems",
+      "url": "https://pages.cs.wisc.edu/~remzi/OSTEP/threads-bugs.pdf"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "id": "py-alias-001",
+  "type": "predict-output",
+  "track": "python",
+  "verified": false,
+  "title": "+= Is Not a = a +",
+  "topics": [
+    "mutability",
+    "names-and-references"
+  ],
+  "difficulty": "beginner",
+  "language": "python",
+  "code": "a = [1, 2]\nb = a\na += [3]\nprint(b)\n\na = [1, 2]\nb = a\na = a + [3]\nprint(b)",
+  "distractors": [
+    "[1, 2, 3]\n[1, 2, 3]",
+    "[1, 2]\n[1, 2]",
+    "[1, 2]\n[1, 2, 3]"
+  ],
+  "explanation": "Python variables are names bound to objects. After `b = a`, both names refer to the **same** list.\n\n`a += [3]` on a list calls `list.__iadd__`, which extends the list **in place**. The shared object changes, so `b` sees `[1, 2, 3]`.\n\n`a = a + [3]` builds a **new** list and rebinds the name `a` to it. `b` still points at the original, unchanged `[1, 2]`.\n\nFor immutable types like `int`, `str` and `tuple`, `+=` can't mutate, so it always creates a new object and both forms behave the same.",
+  "try_this": "Add `print(a is b)` after each block. Then try the same thing with tuples instead of lists."
+}

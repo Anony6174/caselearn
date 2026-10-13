@@ -1,16 +1,16 @@
 import { useState, useCallback, useMemo } from "react";
-import type { CaseStudy, Difficulty } from "../types/caseStudy";
+import type { Difficulty, Item } from "../content/schema";
 
-export function useFilters(caseStudies: CaseStudy[]) {
+export function useFilters(items: Item[]) {
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty | "all">("all");
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
 
   // All unique topics across all case studies, sorted
   const allTopics = useMemo<string[]>(() => {
     const set = new Set<string>();
-    caseStudies.forEach((cs) => cs.topics.forEach((t) => set.add(t)));
+    items.forEach((cs) => cs.topics.forEach((t) => set.add(t)));
     return Array.from(set).sort();
-  }, [caseStudies]);
+  }, [items]);
 
   const toggleTopic = useCallback((topic: string) => {
     setSelectedTopics((prev) =>
@@ -23,14 +23,14 @@ export function useFilters(caseStudies: CaseStudy[]) {
     setSelectedTopics([]);
   }, []);
 
-  const filtered = useMemo<CaseStudy[]>(() => {
-    return caseStudies.filter((cs) => {
+  const filtered = useMemo<Item[]>(() => {
+    return items.filter((cs) => {
       const diffOk = selectedDifficulty === "all" || cs.difficulty === selectedDifficulty;
       const topicOk =
         selectedTopics.length === 0 || selectedTopics.some((t) => cs.topics.includes(t));
       return diffOk && topicOk;
     });
-  }, [caseStudies, selectedDifficulty, selectedTopics]);
+  }, [items, selectedDifficulty, selectedTopics]);
 
   return {
     allTopics,

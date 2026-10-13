@@ -1,0 +1,32 @@
+{
+  "id": "os-interrupts-001",
+  "type": "concept",
+  "track": "os",
+  "verified": false,
+  "title": "Disabling Interrupts Isn't a Lock",
+  "topics": [
+    "synchronization",
+    "locks",
+    "multicore"
+  ],
+  "difficulty": "intermediate",
+  "prompt": "On an old single-core machine, an OS could protect a critical section just by disabling interrupts. Why doesn't that work on a multicore CPU, and what do real locks use instead?",
+  "key_points": [
+    "On one core, the only way another thread can interleave is a context switch, which needs an interrupt (e.g. the timer); with interrupts disabled, the critical section runs uninterrupted.",
+    "On multicore, disabling interrupts only affects the current core; threads on other cores keep running and can access the same memory at the same time.",
+    "Real locks rely on atomic hardware instructions (test-and-set, compare-and-swap, `LOCK`-prefixed ops, LL/SC) that the cache-coherence protocol makes atomic across cores.",
+    "Disabling interrupts is also privileged (user code can't do it) and dangerous (lost interrupts, a buggy section hangs the machine), so even kernels use it only for very short sections, together with spinlocks."
+  ],
+  "model_answer": "Mutual exclusion means no other thread can run the critical section at the same time. On a single core, the only way the current thread can be paused and another one run is via an interrupt: the timer fires and the scheduler preempts. Disable interrupts, and nothing can preempt you until you re-enable them.\n\nOn a multicore machine, the other threads aren't waiting to be scheduled on *your* core; they're already running on other cores. Disabling interrupts on core 0 doesn't stop core 1 from executing the same critical section on the same data.\n\nSo locks are built on **atomic read-modify-write instructions**: test-and-set, compare-and-swap (`lock cmpxchg` on x86), or load-linked/store-conditional on ARM/RISC-V. The cache-coherence protocol guarantees that only one core's atomic operation on a cache line succeeds at a time. A spinlock loops on CAS, and a mutex spins briefly and then asks the kernel to sleep (futex on Linux).\n\nKernels still disable interrupts *locally* in combination with spinlocks, so that an interrupt handler on the same core doesn't deadlock trying to take a lock the interrupted code already holds. Interrupts alone are never enough on SMP.",
+  "follow_ups": [
+    "Why is a naive spinlock (`while (locked); locked = 1;`) broken even on one core?",
+    "When is spinning better than sleeping?",
+    "What is priority inversion, and how did it affect the Mars Pathfinder rover?"
+  ],
+  "sources": [
+    {
+      "title": "OSTEP: Locks",
+      "url": "https://pages.cs.wisc.edu/~remzi/OSTEP/threads-locks.pdf"
+    }
+  ]
+}

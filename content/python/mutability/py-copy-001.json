@@ -1,0 +1,20 @@
+{
+  "id": "py-copy-001",
+  "type": "predict-output",
+  "track": "python",
+  "verified": false,
+  "title": "Shallow Copy, Deep Trouble",
+  "topics": [
+    "mutability",
+    "copying"
+  ],
+  "difficulty": "intermediate",
+  "language": "python",
+  "code": "import copy\n\norig = {\"tags\": [\"a\"], \"n\": 1}\nshallow = copy.copy(orig)\ndeep = copy.deepcopy(orig)\n\nshallow[\"tags\"].append(\"b\")\nshallow[\"n\"] = 2\ndeep[\"tags\"].append(\"c\")\n\nprint(orig)",
+  "distractors": [
+    "{'tags': ['a'], 'n': 1}",
+    "{'tags': ['a', 'b'], 'n': 2}",
+    "{'tags': ['a', 'b', 'c'], 'n': 1}"
+  ],
+  "explanation": "`copy.copy` makes a new dict, but its values are the **same objects** as in the original. So `shallow[\"tags\"]` *is* `orig[\"tags\"]`, and appending `\"b\"` shows up in `orig`.\n\n`shallow[\"n\"] = 2` rebinds a key in the *new* dict only; it doesn't mutate anything shared, so `orig[\"n\"]` stays `1`.\n\n`copy.deepcopy` recursively copies the nested list, so appending `\"c\"` affects only `deep`.\n\nSame rule as `dict(orig)`, `orig.copy()`, `list(x)` and `x[:]`: they are all shallow."
+}

@@ -1,0 +1,22 @@
+{
+  "id": "cpp-ctor-001",
+  "type": "predict-output",
+  "track": "cpp",
+  "verified": false,
+  "title": "Who Gets Built First?",
+  "topics": [
+    "constructors",
+    "inheritance",
+    "raii"
+  ],
+  "difficulty": "intermediate",
+  "language": "cpp",
+  "code": "#include <iostream>\n\nstruct Member {\n    Member()  { std::cout << \"Member ctor\\n\"; }\n    ~Member() { std::cout << \"Member dtor\\n\"; }\n};\n\nstruct Base {\n    Base()  { std::cout << \"Base ctor\\n\"; }\n    ~Base() { std::cout << \"Base dtor\\n\"; }\n};\n\nstruct Derived : Base {\n    Member m;\n    Derived()  { std::cout << \"Derived ctor\\n\"; }\n    ~Derived() { std::cout << \"Derived dtor\\n\"; }\n};\n\nint main() {\n    Derived d;\n}",
+  "explanation": "Construction goes from the inside out: base classes first, then members (in declaration order), then the constructor body. By the time `Derived()`'s body runs, everything it might use already exists.\n\nDestruction is the exact reverse: `~Derived()`'s body runs while its members and base are still alive, then the members are destroyed, then the base.\n\nThis guaranteed reverse order is what makes RAII work: a lock or file opened later is always released before the things it depends on.",
+  "sources": [
+    {
+      "title": "cppreference: constructors and member initializer lists",
+      "url": "https://en.cppreference.com/w/cpp/language/constructor"
+    }
+  ]
+}

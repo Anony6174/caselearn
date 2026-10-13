@@ -1,0 +1,15 @@
+{
+  "id": "cpp-rangefor-001",
+  "type": "predict-output",
+  "track": "cpp",
+  "verified": false,
+  "title": "Range-for Copies",
+  "topics": [
+    "references",
+    "stl-containers"
+  ],
+  "difficulty": "beginner",
+  "language": "cpp",
+  "code": "#include <iostream>\n#include <vector>\n\nint main() {\n    std::vector<int> v{1, 2, 3};\n    for (int x : v)  x *= 2;\n    for (int& x : v) x += 1;\n    for (int x : v)  std::cout << x << ' ';\n    std::cout << '\\n';\n}",
+  "explanation": "`for (int x : v)` copies each element into `x`, so `x *= 2` only doubles the copy and the vector doesn't change.\n\n`for (int& x : v)` binds `x` to each element, so `x += 1` really changes the vector: `{2, 3, 4}`.\n\nThe same bug is easy to write with big objects too, plus a performance cost: `for (auto s : strings)` copies every string. Use `const auto&` to read and `auto&` to modify."
+}

@@ -1,0 +1,54 @@
+{
+  "id": "os-sched-001",
+  "type": "case-mcq",
+  "track": "os",
+  "verified": false,
+  "title": "Three Jobs, One CPU",
+  "topics": [
+    "scheduling",
+    "cpu-scheduling"
+  ],
+  "difficulty": "intermediate",
+  "scenario": "A batch system receives three jobs at the same moment, in this order: A needs 8 ms of CPU, B needs 4 ms, C needs 1 ms. Runtimes are known exactly in advance, there's one CPU, and the only goal stated by the team is to minimise the **average waiting time** (time spent ready but not running).",
+  "question": "Which schedule achieves the lowest average waiting time?",
+  "options": [
+    {
+      "id": "a",
+      "text": "First-come, first-served: A, then B, then C.",
+      "is_correct": false,
+      "explanation": "Waits are A=0, B=8, C=12, an average of 6.67 ms. The short jobs are stuck behind the long one (the convoy effect)."
+    },
+    {
+      "id": "b",
+      "text": "Shortest job first: C, then B, then A.",
+      "is_correct": true,
+      "explanation": "Waits are C=0, B=1, A=5, an average of 2 ms. Running short jobs first means the fewest jobs wait behind each running job; SJF is provably optimal for average waiting time when all jobs arrive together and runtimes are known."
+    },
+    {
+      "id": "c",
+      "text": "Round robin with a 1 ms quantum, starting with A.",
+      "is_correct": false,
+      "explanation": "C finishes at 3 ms, B at 9 ms, A at 13 ms, so waits are 2, 5 and 5, an average of 4 ms. RR gives good *response time* and fairness, but here it's worse than SJF for waiting time, and real switches add overhead."
+    },
+    {
+      "id": "d",
+      "text": "Longest job first, so the big job can't be starved: A, B, C.",
+      "is_correct": false,
+      "explanation": "Same order as FCFS here, so the same 6.67 ms average. Avoiding starvation is a real concern, but it isn't the stated goal, and this order maximises waiting for everyone else."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "Shortest-job-first minimises average waiting time, but it needs runtimes in advance and can starve long jobs. Real schedulers (like MLFQ) try to approximate it by learning which jobs behave like short ones.",
+  "common_misconception": "\"Round robin is the fairest, so it must be the best.\" Fairness and response time aren't the same goal as average waiting or turnaround time; the right policy depends on the metric.",
+  "experimentation": {
+    "objective": "Simulate the schedules and check the averages yourself, then break SJF's assumptions.",
+    "data_generation_code": "from collections import deque\n\njobs = {\"A\": 8, \"B\": 4, \"C\": 1}  # name -> CPU burst (ms), all arrive at t=0\n\ndef run_in_order(order):\n    t, wait = 0, {}\n    for j in order:\n        wait[j] = t\n        t += jobs[j]\n    return wait\n\ndef round_robin(quantum):\n    remaining = dict(jobs)\n    queue, t, done = deque(jobs), 0, {}\n    while queue:\n        j = queue.popleft()\n        step = min(quantum, remaining[j])\n        t += step\n        remaining[j] -= step\n        if remaining[j] == 0:\n            done[j] = t\n        else:\n            queue.append(j)\n    return {j: done[j] - jobs[j] for j in jobs}  # wait = finish - burst\n\nfor name, wait in [(\"FCFS\", run_in_order(\"ABC\")), (\"SJF\", run_in_order(\"CBA\")), (\"RR q=1\", round_robin(1))]:\n    print(f\"{name:7} waits={wait}  avg={sum(wait.values()) / len(wait):.2f} ms\")\n",
+    "suggested_exploration": "Try quanta of 2, 4 and 100 for round robin. What happens as the quantum grows? Then add 20 more 1 ms jobs: how long does A wait under SJF?"
+  },
+  "sources": [
+    {
+      "title": "OSTEP: Scheduling: Introduction",
+      "url": "https://pages.cs.wisc.edu/~remzi/OSTEP/cpu-sched.pdf"
+    }
+  ]
+}

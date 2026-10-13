@@ -36,7 +36,16 @@ import io, base64, sys
 /* ── run user code ──────────────────────────────────────────────── */
 async function runCode(code) {
   try {
-    await pyodide.runPythonAsync(code);
+    // Like a notebook cell: if the code ends in a bare expression (e.g.
+    // `spearmanr(x, y)`), print its repr, so the result is visible without print().
+    pyodide.globals.set("__caselearn_src", code);
+    await pyodide.runPythonAsync(`
+from pyodide.code import eval_code_async as __caselearn_eval
+__caselearn_result = await __caselearn_eval(__caselearn_src, globals())
+if __caselearn_result is not None:
+    print(repr(__caselearn_result))
+del __caselearn_result
+`);
 
     // Capture any open matplotlib figures as base64 PNGs
     const figCapture = pyodide.runPython(`

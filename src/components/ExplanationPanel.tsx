@@ -1,74 +1,51 @@
-import type { CaseStudy } from "../types/caseStudy";
+import type { CaseMcqItem } from "../content/schema";
+import { Note, ResultBanner } from "./items/ResultBanner";
+import { RichText } from "./RichText";
 
 interface Props {
-  cs: CaseStudy;
+  cs: CaseMcqItem;
   selectedId: string;
 }
 
-function optionClass(optId: string, correctId: string, selectedId: string) {
-  if (optId === correctId) return "option-card-correct";
-  if (optId === selectedId) return "option-card-wrong";
-  return "option-card-neutral";
+function optionState(optId: string, correctId: string, selectedId: string) {
+  if (optId === correctId) return "is-correct";
+  if (optId === selectedId) return "is-wrong";
+  return "";
 }
 
 export function ExplanationPanel({ cs, selectedId }: Props) {
   const isCorrect = selectedId === cs.correct_option_id;
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Result banner */}
-      <div className={`rounded-xl px-5 py-4 border flex items-center gap-3 ${
-        isCorrect
-          ? "bg-[rgba(52,211,153,0.08)] border-[rgba(52,211,153,0.4)] text-[var(--color-beginner)]"
-          : "bg-[rgba(248,113,113,0.08)] border-[rgba(248,113,113,0.35)] text-[var(--color-advanced)]"
-      }`}>
-        <span className="text-2xl">{isCorrect ? "✓" : "✗"}</span>
-        <div>
-          <p className="font-semibold text-sm">{isCorrect ? "Correct!" : "Not quite."}</p>
-          <p className="text-xs opacity-80 mt-0.5">
-            {isCorrect
-              ? "Great reasoning — see why each option works or doesn't below."
-              : `The correct answer was option ${cs.correct_option_id.toUpperCase()}.`}
-          </p>
-        </div>
-      </div>
+    <div className="space-y-8 animate-fade-in">
+      <ResultBanner tone={isCorrect ? "correct" : "incorrect"} title={isCorrect ? "Correct" : "Not quite"}>
+        {isCorrect
+          ? "Now read why the other options don't fit."
+          : `The answer is option ${cs.correct_option_id.toUpperCase()}. Here's why each option does or doesn't fit.`}
+      </ResultBanner>
 
-      {/* All 4 explanations */}
-      <section className="space-y-3">
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-[var(--color-accent)]">All Options Explained</h3>
+      <section className="space-y-2.5">
+        <h3 className="eyebrow">Every option, explained</h3>
         {cs.options.map((opt) => (
-          <div
-            key={opt.id}
-            className={`${optionClass(opt.id, cs.correct_option_id, selectedId)} flex gap-3 items-start`}
-          >
-            <span className={`shrink-0 w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold uppercase ${
-              opt.id === cs.correct_option_id
-                ? "bg-[var(--color-beginner)] text-[#0a0a0f]"
-                : opt.id === selectedId
-                ? "bg-[var(--color-advanced)] text-white"
-                : "bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)]"
-            }`}>
-              {opt.id === cs.correct_option_id ? "✓" : opt.id}
-            </span>
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-[var(--color-text)]">{opt.text}</p>
-              <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">{opt.explanation}</p>
+          <div key={opt.id} className={`option ${optionState(opt.id, cs.correct_option_id, selectedId)}`}>
+            <span className="option-key">{opt.id === cs.correct_option_id ? "✓" : opt.id}</span>
+            <div className="space-y-1 pt-0.5 min-w-0">
+              <p className="text-sm font-medium text-[var(--color-text)]">
+                {opt.text}
+                {opt.id === selectedId && <span className="ml-2 text-xs font-normal text-[var(--color-text-faint)]">your pick</span>}
+              </p>
+              <RichText text={opt.explanation} className="text-sm text-[var(--color-text-muted)] leading-relaxed" />
             </div>
           </div>
         ))}
       </section>
 
-      {/* Key takeaway */}
-      <section className="card p-5 space-y-2 border-l-2 border-l-[var(--color-accent)]">
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-[var(--color-accent)]">Key Takeaway</h3>
-        <p className="text-sm text-[var(--color-text)] leading-relaxed">{cs.key_takeaway}</p>
-      </section>
-
-      {/* Common misconception */}
-      <section className="card p-5 space-y-2 border-l-2 border-l-[var(--color-intermediate)]">
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-[var(--color-intermediate)]">Common Misconception</h3>
-        <p className="text-sm text-[var(--color-text)] leading-relaxed">{cs.common_misconception}</p>
-      </section>
+      <Note label="Key takeaway">
+        <RichText text={cs.key_takeaway} />
+      </Note>
+      <Note label="Common misconception" tone="warn">
+        <RichText text={cs.common_misconception} />
+      </Note>
     </div>
   );
 }

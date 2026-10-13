@@ -1,0 +1,21 @@
+{
+  "id": "cpp-static-001",
+  "type": "predict-output",
+  "track": "cpp",
+  "verified": false,
+  "title": "The Counter That Remembers",
+  "topics": [
+    "storage-duration",
+    "functions"
+  ],
+  "difficulty": "beginner",
+  "language": "cpp",
+  "code": "#include <iostream>\n\nint counter() { static int n = 0; return ++n; }\nint fresh()   { int n = 0;        return ++n; }\n\nint main() {\n    std::cout << counter() << counter() << counter() << ' '\n              << fresh() << fresh() << '\\n';\n}",
+  "distractors": [
+    "111 11",
+    "123 12",
+    "321 11"
+  ],
+  "explanation": "A `static` local is initialised once, the first time control reaches it, and then lives until the program ends, so each call to `counter()` sees the previous value: 1, 2, 3. A plain local `n` is created fresh on every call, so `fresh()` always returns 1.\n\nWhy `123` and not `321`: since C++17, the operands of a `<<` chain are evaluated left to right. Before C++17 the order of the calls was unspecified, and this line could legally print `321`.",
+  "try_this": "Make `counter` return `n++` instead of `++n`. What changes?"
+}

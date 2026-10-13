@@ -1,0 +1,49 @@
+{
+  "id": "os-deadlock-001",
+  "type": "case-mcq",
+  "track": "os",
+  "verified": false,
+  "title": "The Bank Transfer That Hangs",
+  "topics": [
+    "deadlock",
+    "synchronization"
+  ],
+  "difficulty": "beginner",
+  "scenario": "A payments service moves money with `transfer(from, to, amount)`. Each account has its own mutex. The function locks `from`, then locks `to`, moves the money, and unlocks both. Under load the service occasionally freezes completely: CPU drops to zero, and thread dumps show two worker threads, one inside `transfer(alice, bob, …)` and one inside `transfer(bob, alice, …)`, each blocked on its second lock.",
+  "question": "What is the most robust fix?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Always acquire the two account locks in a global order, e.g. lower account ID first, regardless of transfer direction.",
+      "is_correct": true,
+      "explanation": "The hang is a circular wait: T1 holds alice and wants bob, T2 holds bob and wants alice. If every thread takes locks in the same global order, a cycle is impossible: whoever gets the lower-ID lock first will also get the higher one. This removes one of the four Coffman conditions (circular wait) with almost no runtime cost."
+    },
+    {
+      "id": "b",
+      "text": "Replace the mutexes with recursive (re-entrant) mutexes.",
+      "is_correct": false,
+      "explanation": "Recursive mutexes only let the *same* thread re-acquire a lock it already holds. Here two *different* threads each hold the lock the other needs, so re-entrancy changes nothing."
+    },
+    {
+      "id": "c",
+      "text": "When the second lock isn't available, release the first, sleep a random few milliseconds, and retry.",
+      "is_correct": false,
+      "explanation": "This avoids permanent deadlock (it breaks hold-and-wait), but it can livelock (both threads keep backing off together), adds latency, and wastes work under contention. It's a fallback for when you *can't* impose an order, not the robust first fix."
+    },
+    {
+      "id": "d",
+      "text": "Give worker threads a higher scheduling priority so they finish transfers faster.",
+      "is_correct": false,
+      "explanation": "Both threads are blocked, not slow. Priority affects who runs when there's CPU contention, and a blocked thread doesn't run at all. The cycle stays."
+    }
+  ],
+  "correct_option_id": "a",
+  "key_takeaway": "Deadlock needs all four Coffman conditions: mutual exclusion, hold-and-wait, no preemption and circular wait. Imposing a global lock order is the cheapest way to make circular wait impossible.",
+  "common_misconception": "\"Deadlocks are timing bugs, so making the code faster or adding retries fixes them.\" Speed only changes how often the bad interleaving happens. The fix is structural: make the cycle impossible.",
+  "sources": [
+    {
+      "title": "OSTEP: Common Concurrency Problems",
+      "url": "https://pages.cs.wisc.edu/~remzi/OSTEP/threads-bugs.pdf"
+    }
+  ]
+}

@@ -26,16 +26,16 @@ export function ProgressBackup() {
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-3 mt-12 text-xs text-[var(--color-text-muted)]">
-      <span>Progress is stored in this browser only.</span>
-      <button onClick={handleExport} className="underline hover:text-[var(--color-text)]">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[var(--color-text-faint)]">
+      <span>Progress is saved in this browser only.</span>
+      <button onClick={handleExport} className="link">
         Export
       </button>
-      <button onClick={() => fileRef.current?.click()} className="underline hover:text-[var(--color-text)]">
+      <button onClick={() => fileRef.current?.click()} className="link">
         Import
       </button>
       <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={handleImport} />
-      {message && <span role="status">{message}</span>}
+      {message && <span role="status" className="text-[var(--color-text-muted)]">{message}</span>}
     </div>
   );
 }

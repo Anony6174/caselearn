@@ -1,0 +1,32 @@
+{
+  "id": "os-ctxswitch-001",
+  "type": "concept",
+  "track": "os",
+  "verified": false,
+  "title": "Thread Switch vs Process Switch",
+  "topics": [
+    "context-switching",
+    "threads",
+    "processes"
+  ],
+  "difficulty": "beginner",
+  "prompt": "Interviewers love this one: *why is switching between two threads of the same process cheaper than switching between two processes?* Be specific about what doesn't need to change.",
+  "key_points": [
+    "Both switches save and restore CPU state (registers, program counter, stack pointer) and go through the kernel scheduler.",
+    "Threads of one process share an address space, so there's no page-table switch (no reload of the page-table base register, e.g. CR3 on x86).",
+    "Keeping the same address space means TLB entries stay valid; a process switch may flush the TLB (or rely on ASID/PCID tags), causing TLB misses afterwards.",
+    "The shared memory is also likely still warm in the CPU caches; a new process's working set is cold. These indirect costs often dominate the direct switch cost."
+  ],
+  "model_answer": "Any context switch traps into the kernel, saves the current thread's registers (including PC and stack pointer) into its kernel structure, runs the scheduler, and restores the next thread's registers. That part costs about the same for threads and processes.\n\nThe difference is the address space. Threads of the same process share one set of page tables, so the kernel doesn't need to switch the page-table base register (CR3 on x86). Switching *processes* does. Changing address spaces makes the TLB's cached translations wrong for the new process, so they're flushed, or tagged with an address-space ID (PCID/ASID) to reduce flushing. Either way, the new process starts with many TLB misses, each needing a multi-level page-table walk.\n\nThe biggest costs are often indirect: after a process switch the caches and TLB hold the *old* process's data, so the new one runs slowly until it warms them up. Sibling threads share code and data, so much of it is still hot.",
+  "follow_ups": [
+    "What is the difference between a mode switch (user → kernel) and a context switch?",
+    "If threads are cheaper, why do browsers like Chrome use a separate process per tab?",
+    "What does a user-level (green) thread switch skip compared with a kernel thread switch?"
+  ],
+  "sources": [
+    {
+      "title": "OSTEP: Limited Direct Execution",
+      "url": "https://pages.cs.wisc.edu/~remzi/OSTEP/cpu-mechanisms.pdf"
+    }
+  ]
+}

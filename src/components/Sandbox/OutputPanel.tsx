@@ -4,26 +4,29 @@ import type { OutputItem } from "../../hooks/usePyodideWorker";
 interface Props {
   output: OutputItem[];
   isRunning: boolean;
+  /** Whether the code has been run since the output was last cleared. */
+  hasRun?: boolean;
 }
 
-export function OutputPanel({ output, isRunning }: Props) {
-  const bottomRef = useRef<HTMLDivElement>(null);
+export function OutputPanel({ output, isRunning, hasRun = false }: Props) {
+  const boxRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom on new output
+  // Keep the newest output in view by scrolling the box itself, not the page.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const box = boxRef.current;
+    if (box) box.scrollTop = box.scrollHeight;
   }, [output]);
 
   if (output.length === 0 && !isRunning) {
     return (
-      <div className="flex items-center justify-center h-24 text-xs text-[var(--color-text-muted)] italic">
-        Output will appear here after you run the code.
+      <div className="flex items-center justify-center min-h-[96px] rounded-xl border border-dashed border-[var(--color-border-strong)] text-xs text-[var(--color-text-faint)]">
+        {hasRun ? "Ran without errors. Nothing was printed; add print(...) to see values." : "Output appears here when you run the code."}
       </div>
     );
   }
 
   return (
-    <div className="min-h-[80px] max-h-[400px] overflow-auto rounded-xl border border-[var(--color-border)] bg-[#0d0d14] p-4 space-y-1 font-mono text-sm">
+    <div ref={boxRef} className="code-surface min-h-[96px] max-h-[320px] overflow-auto p-4 space-y-1">
       {output.map((item, i) => {
         if (item.kind === "figure") {
           return (
@@ -31,7 +34,7 @@ export function OutputPanel({ output, isRunning }: Props) {
               key={i}
               src={`data:image/png;base64,${item.data}`}
               alt="matplotlib output"
-              className="max-w-full rounded-lg mt-2"
+              className="max-w-full rounded-lg mt-2 bg-white"
             />
           );
         }
@@ -40,8 +43,8 @@ export function OutputPanel({ output, isRunning }: Props) {
             key={i}
             className={`whitespace-pre-wrap break-words leading-relaxed ${
               item.kind === "stderr"
-                ? "text-[var(--color-advanced)]"
-                : "text-[#c8e6c9]"
+                ? "text-[var(--color-bad)]"
+                : "text-[var(--color-text)]"
             }`}
           >
             {item.text}
@@ -50,11 +53,10 @@ export function OutputPanel({ output, isRunning }: Props) {
       })}
       {isRunning && (
         <div className="flex items-center gap-2 text-[var(--color-text-muted)] pt-1">
-          <div className="w-3 h-3 border border-[var(--color-accent)] border-t-transparent rounded-full animate-spin" />
+          <div className="spinner !w-3 !h-3 !border" />
           <span className="text-xs">Running…</span>
         </div>
       )}
-      <div ref={bottomRef} />
     </div>
   );
 }

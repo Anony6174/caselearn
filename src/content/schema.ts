@@ -1,24 +1,11 @@
 import { z } from "zod";
+import { TRACKS } from "./tracks.ts";
 
-// Shared between the build script (runtime validation) and the app (types only,
-// via `import type`, so zod never ships to the browser).
+export { TRACKS, TRACK_TITLES } from "./tracks.ts";
 
-export const TRACKS = [
-  "ml-stats", "dsa", "cpp", "python", "asm", "arch", "os", "dbms", "cn", "oop",
-] as const;
-
-export const TRACK_TITLES: Record<Track, string> = {
-  "ml-stats": "ML & Statistics",
-  dsa: "Data Structures & Algorithms",
-  cpp: "C++",
-  python: "Python",
-  asm: "Assembly (x86-64)",
-  arch: "Computer Architecture",
-  os: "Operating Systems",
-  dbms: "Databases & SQL",
-  cn: "Computer Networks",
-  oop: "OOP & Low-Level Design",
-};
+// Shared between the build script (runtime validation) and the app.
+// The app must only `import type` from here, so zod never ships to the browser;
+// runtime constants the app needs live in ./tracks.ts.
 
 export const TrackSchema = z.enum(TRACKS);
 export const DifficultySchema = z.enum(["beginner", "intermediate", "advanced"]);
@@ -71,19 +58,53 @@ export const CaseMcqItemSchema = BaseItemSchema.extend({
   }
 });
 
-// Phase 1 adds predict-output, concept and code-challenge to this union.
-export const ItemSchema = z.discriminatedUnion("type", [CaseMcqItemSchema]);
+export const SnippetLanguageSchema = z.enum(["python", "cpp"]);
+
+// "What does this print?" The real output is computed by the build script
+// (scripts/run-snippet.ts) and written into the bundle, never typed by hand.
+export const PredictOutputItemSchema = BaseItemSchema.extend({
+  type: z.literal("predict-output"),
+  language: SnippetLanguageSchema,
+  prompt: z.string().min(1).optional(), // defaults to "What does this print?"
+  code: z.string().min(1),
+  // Optional MCQ mode: plausible wrong outputs. Without these you type your prediction.
+  distractors: z.array(z.string().min(1)).min(1).max(3).optional(),
+  explanation: z.string().min(1),
+  try_this: z.string().min(1).optional(), // a follow-up experiment for the sandbox
+  expected_output: z.string().optional(), // set by the build; must not be in source files
+});
+
+// An open "why" question: write your answer, then grade it against key points.
+export const ConceptItemSchema = BaseItemSchema.extend({
+  type: z.literal("concept"),
+  prompt: z.string().min(1),
+  key_points: z.array(z.string().min(1)).min(2).max(6),
+  model_answer: z.string().min(1),
+  follow_ups: z.array(z.string().min(1)).default([]),
+});
+
+// Phase 3 adds code-challenge to this union.
+export const ItemSchema = z.discriminatedUnion("type", [
+  CaseMcqItemSchema,
+  PredictOutputItemSchema,
+  ConceptItemSchema,
+]);
 
 export type Track = z.infer<typeof TrackSchema>;
 export type Difficulty = z.infer<typeof DifficultySchema>;
+export type SnippetLanguage = z.infer<typeof SnippetLanguageSchema>;
 export type CaseMcqItem = z.infer<typeof CaseMcqItemSchema>;
+export type PredictOutputItem = z.infer<typeof PredictOutputItemSchema>;
+export type ConceptItem = z.infer<typeof ConceptItemSchema>;
 export type Item = z.infer<typeof ItemSchema>;
+export type ItemType = Item["type"];
 
 export interface TrackSummary {
   id: Track;
   title: string;
   count: number;
   topics: string[];
+  item_ids: string[];
 }
 
 export interface ContentIndex {

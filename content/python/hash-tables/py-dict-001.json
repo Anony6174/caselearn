@@ -1,0 +1,26 @@
+{
+  "id": "py-dict-001",
+  "type": "concept",
+  "track": "python",
+  "verified": false,
+  "title": "Why dict Lookups Are O(1)",
+  "topics": [
+    "hash-tables",
+    "dicts"
+  ],
+  "difficulty": "advanced",
+  "prompt": "Why is looking up a key in a Python `dict` O(1) on average, when could it degrade, and why must dict keys be hashable (in practice, immutable)?",
+  "key_points": [
+    "A dict is a hash table: `hash(key)` picks a slot directly, so there's no scan over the other keys.",
+    "Collisions (different keys, same slot) are handled by probing other slots (CPython uses open addressing), then comparing with `==`.",
+    "Average O(1) relies on a good hash spread and a bounded load factor; the table resizes when it fills up (amortized O(1) inserts). With many collisions, lookups degrade toward O(n).",
+    "A key's hash must not change while it's in the dict; a mutated key would be looked up in the wrong slot and effectively lost. That's why lists aren't hashable.",
+    "Equal objects must have equal hashes (`a == b` implies `hash(a) == hash(b)`), or lookups break."
+  ],
+  "model_answer": "A `dict` is a hash table. To find a key, Python computes `hash(key)`, maps it to a slot index, and looks there, so the cost doesn't depend on how many other keys are stored. If the slot holds a different key (a collision), CPython probes a deterministic sequence of other slots (open addressing), comparing first by hash and then by `==`, until it finds the key or an empty slot.\n\nThis is O(1) on average because the table is kept sparse: when it gets about two-thirds full it's resized and every entry is re-inserted, an O(n) step that happens rarely enough that inserts are amortized O(1). If many keys collide (a bad `__hash__`, or adversarially chosen inputs), probe chains get long and lookups degrade toward O(n). That's why Python randomizes string hashes per process.\n\nThe hash decides where an entry lives, so it must stay the same while the key is in the table. If you could mutate a list used as a key, its hash would change and lookups would search the wrong slot, so the entry would be unreachable. So mutable built-ins (`list`, `dict`, `set`) are unhashable, and you use `tuple` / `frozenset` instead. The contract for custom classes is that `a == b` must imply `hash(a) == hash(b)`.",
+  "follow_ups": [
+    "Why does defining `__eq__` on a class without `__hash__` make its instances unhashable?",
+    "Since Python 3.7 dicts preserve insertion order. How can a hash table do that cheaply?",
+    "Why does a `set` of strings print in a different order between runs, but a `set` of small ints doesn't?"
+  ]
+}

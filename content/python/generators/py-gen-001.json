@@ -1,0 +1,21 @@
+{
+  "id": "py-gen-001",
+  "type": "predict-output",
+  "track": "python",
+  "verified": false,
+  "title": "The Generator Runs Dry",
+  "topics": [
+    "generators",
+    "iterators"
+  ],
+  "difficulty": "intermediate",
+  "language": "python",
+  "code": "squares = (x * x for x in range(4))\nprint(sum(squares))\nprint(sum(squares))\n\nnums = [x * x for x in range(4)]\nprint(sum(nums), sum(nums))",
+  "distractors": [
+    "14\n14\n14 14",
+    "14\n28\n14 28",
+    "0\n14\n14 14"
+  ],
+  "explanation": "`(x * x for x in range(4))` is a **generator expression**: a lazy iterator that produces values on demand and remembers its position. The first `sum` pulls all four values (0 + 1 + 4 + 9 = 14). The generator is now exhausted, so the second `sum` gets no values and returns `0`. No error is raised.\n\nThe list comprehension builds a real list in memory, which you can iterate as many times as you like.\n\nTrade-off: generators use O(1) memory and can be infinite, but you can only go through them once. This also bites with `map`, `filter`, `zip` and file objects.",
+  "try_this": "Call `next(squares)` after the two sums. What happens?"
+}

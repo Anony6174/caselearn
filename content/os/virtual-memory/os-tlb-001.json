@@ -1,0 +1,33 @@
+{
+  "id": "os-tlb-001",
+  "type": "concept",
+  "track": "os",
+  "verified": false,
+  "title": "TLBs and Huge Pages",
+  "topics": [
+    "virtual-memory",
+    "tlb",
+    "performance"
+  ],
+  "difficulty": "advanced",
+  "prompt": "A database team switches their buffer pool from 4 KB pages to 2 MB huge pages and sees a measurable speed-up, without changing any code. Explain what the TLB is and why huge pages helped.",
+  "key_points": [
+    "Translating an address needs a page-table walk: on x86-64, 4 levels, so up to 4 extra memory accesses per lookup.",
+    "The TLB is a small, fast hardware cache of recent virtual→physical page translations; a TLB hit avoids the walk.",
+    "TLB reach = number of entries × page size; with 4 KB pages, a large working set (GBs) causes frequent TLB misses.",
+    "2 MB pages cover 512× more memory per entry (and the walk is one level shorter), so far fewer misses for big, scattered working sets.",
+    "Trade-offs: internal fragmentation, slower allocation/compaction, and a page is the unit of swapping/COW."
+  ],
+  "model_answer": "Every memory access uses a virtual address that must be translated. Doing it from scratch means walking the multi-level page table, 4 levels on x86-64, so up to 4 dependent memory reads before the real access. That would be far too slow, so the CPU caches recent translations in the **TLB**, a small (typically tens to a couple of thousand entries) associative cache inside the core.\n\nWhat matters is **TLB reach**: entries × page size. 1,536 entries × 4 KB is only about 6 MB. A database buffer pool of tens of GB, accessed fairly randomly, misses in the TLB constantly, and each miss costs a page walk (which may itself miss in the data caches).\n\nWith 2 MB pages, each entry covers 512× more memory, so the reach grows from megabytes to gigabytes (CPUs have separate, sometimes smaller, TLB arrays for huge pages, but the gain is still large), and walks are one level shorter. TLB misses drop sharply, which shows up as a speed-up with no code changes.\n\nThe costs: memory is allocated in 2 MB chunks (waste for small or sparse data), finding contiguous 2 MB physical regions needs compaction, and COW/swapping now happen 2 MB at a time. Transparent Huge Pages make this automatic but can cause latency spikes, which is why some databases recommend disabling THP and using explicitly reserved huge pages.",
+  "follow_ups": [
+    "What does a context switch do to the TLB, and how do PCIDs/ASIDs help?",
+    "What is a TLB shootdown, and why does `munmap` on a multi-threaded process cost more?",
+    "Why might a linked list traversal suffer more from TLB misses than an array scan?"
+  ],
+  "sources": [
+    {
+      "title": "OSTEP: Paging: Faster Translations (TLBs)",
+      "url": "https://pages.cs.wisc.edu/~remzi/OSTEP/vm-tlbs.pdf"
+    }
+  ]
+}

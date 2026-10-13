@@ -1,0 +1,21 @@
+{
+  "id": "cpp-unsigned-001",
+  "type": "predict-output",
+  "track": "cpp",
+  "verified": false,
+  "title": "Unsigned Surprises",
+  "topics": [
+    "integer-types",
+    "implicit-conversions"
+  ],
+  "difficulty": "intermediate",
+  "language": "cpp",
+  "prompt": "On a 64-bit Linux machine, what does this print?",
+  "code": "#include <iostream>\n#include <vector>\n\nint main() {\n    std::vector<int> v;\n    std::cout << v.size() - 1 << '\\n';\n\n    unsigned int u = 1;\n    int i = -1;\n    std::cout << (i < u ? \"less\" : \"not less\") << '\\n';\n}",
+  "distractors": [
+    "-1\nless",
+    "18446744073709551615\nless",
+    "0\nnot less"
+  ],
+  "explanation": "`v.size()` returns `std::size_t`, an **unsigned** 64-bit type here. `0 - 1` in unsigned arithmetic doesn't go negative; it wraps around modulo 2⁶⁴ to the largest value, 18446744073709551615. (Unsigned wraparound is well-defined. *Signed* overflow is undefined behaviour.)\n\nIn `i < u`, an `int` and an `unsigned int` meet, and the usual arithmetic conversions turn the `int` into `unsigned`. `-1` becomes 4294967295, which is not less than 1.\n\nThis is the classic bug in `for (int i = 0; i < v.size() - 1; ++i)` when `v` is empty. `-Wall` warns about the signed/unsigned comparison; read your warnings."
+}

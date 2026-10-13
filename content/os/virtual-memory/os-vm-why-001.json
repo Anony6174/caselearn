@@ -1,0 +1,32 @@
+{
+  "id": "os-vm-why-001",
+  "type": "concept",
+  "track": "os",
+  "verified": false,
+  "title": "What Virtual Memory Is Really For",
+  "topics": [
+    "virtual-memory",
+    "isolation"
+  ],
+  "difficulty": "beginner",
+  "prompt": "\"Virtual memory lets you use more memory than you have RAM.\" That's the textbook one-liner, but it's the least important reason modern systems use it. Give the other reasons.",
+  "key_points": [
+    "Isolation and protection: each process has its own address space and can't read or corrupt another's memory (or the kernel's).",
+    "Every process sees the same simple, contiguous layout (code, heap, stack at predictable places), which simplifies compiling, linking and loading.",
+    "Sharing: the same physical frames can be mapped into many processes (shared libraries, copy-on-write fork, shared memory).",
+    "Per-page permissions (read/write/execute, user/kernel) enable protections like non-executable stacks and read-only code.",
+    "Demand paging: memory is allocated lazily, so programs can reserve large ranges and only pay for what they touch (and pages can be swapped out)."
+  ],
+  "model_answer": "Virtual memory puts a translation layer, set up by the OS and enforced by the MMU on every access, between the addresses a program uses and physical RAM. That layer gives you:\n\n- **Isolation**: a process can only reach frames mapped into *its* page table. A bug in one process can't corrupt another or the kernel. This is the main reason it exists.\n- **A clean, uniform address space**: every program can be linked as if it owns memory starting at the same addresses, with heap and stack free to grow, regardless of where its pages physically are.\n- **Sharing**: one copy of `libc` in RAM, mapped read-only into hundreds of processes. COW fork and shared-memory IPC work the same way.\n- **Protection bits per page**: code is read+execute, data is read+write but not executable (NX), the kernel is unreachable from user mode. Many exploit mitigations rely on this.\n- **Laziness**: allocation just reserves address ranges, and frames appear on first touch. Swapping is one consequence of this, and the one-liner's \"more memory than RAM\".",
+  "follow_ups": [
+    "What does ASLR randomize, and why does it need virtual memory?",
+    "Why do kernels map themselves into every process's address space?",
+    "What would break if two processes could see each other's page tables?"
+  ],
+  "sources": [
+    {
+      "title": "OSTEP: The Abstraction: Address Spaces",
+      "url": "https://pages.cs.wisc.edu/~remzi/OSTEP/vm-intro.pdf"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "cpp-iterinval-001",
+  "type": "concept",
+  "track": "cpp",
+  "verified": false,
+  "title": "Why push_back Breaks Your Iterators",
+  "topics": [
+    "stl-containers",
+    "iterator-invalidation"
+  ],
+  "difficulty": "intermediate",
+  "prompt": "You hold a reference `int& first = v[0];` into a `std::vector<int> v`, then call `v.push_back(42)`. Sometimes `first` still works, sometimes it reads garbage. Explain exactly why, and when it's safe.",
+  "key_points": [
+    "A vector stores its elements in one contiguous heap buffer of size `capacity()`.",
+    "When `size() == capacity()`, `push_back` must reallocate: allocate a bigger buffer, move/copy the elements over, and free the old buffer.",
+    "After a reallocation, every pointer, reference and iterator into the old buffer dangles; using one is undefined behaviour (it may seem to work, crash, or read garbage).",
+    "If there was spare capacity, no reallocation happens, and only `end()` is invalidated. That's why the bug shows up only sometimes.",
+    "Fixes: `reserve()` up front if you know the size, use indices instead of references, or re-take the reference after inserting."
+  ],
+  "model_answer": "A `std::vector` keeps its elements in a single contiguous buffer. `first` is effectively a pointer into that buffer.\n\nIf `size() < capacity()`, `push_back` just constructs the new element in the spare slot, so the buffer doesn't move and `first` stays valid (only `end()` changes).\n\nIf the vector is full, `push_back` allocates a larger buffer (typically 1.5–2× bigger), moves the existing elements into it, and frees the old one. `first` still points into the freed memory, and reading it is undefined behaviour. It might print the old value (the memory hasn't been reused yet), print garbage, or crash. That's why the bug looks intermittent: it depends on whether that particular push hit the capacity limit.\n\nTo be safe: call `reserve(n)` before taking references if you know the final size, keep indices rather than references, or re-fetch after modifying. `std::deque::push_back` and `std::list` keep references to existing elements valid, at the cost of non-contiguous storage.",
+  "follow_ups": [
+    "Which operations invalidate iterators of `std::unordered_map`? (Hint: rehashing.)",
+    "Why does `std::vector` prefer to *move* elements during reallocation only if the move constructor is `noexcept`?",
+    "How would AddressSanitizer report this bug?"
+  ],
+  "sources": [
+    {
+      "title": "cppreference: std::vector::push_back (iterator invalidation)",
+      "url": "https://en.cppreference.com/w/cpp/container/vector/push_back"
+    }
+  ]
+}

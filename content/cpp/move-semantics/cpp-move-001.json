@@ -1,0 +1,25 @@
+{
+  "id": "cpp-move-001",
+  "type": "predict-output",
+  "track": "cpp",
+  "verified": false,
+  "title": "std::move That Doesn't Move",
+  "topics": [
+    "move-semantics"
+  ],
+  "difficulty": "advanced",
+  "language": "cpp",
+  "code": "#include <iostream>\n#include <string>\n#include <utility>\n\nint main() {\n    std::string a = \"hello\";\n    std::string b = std::move(a);\n\n    const std::string c = \"world\";\n    std::string d = std::move(c);\n\n    std::cout << b << ' ' << d << ' ' << c << '\\n';\n}",
+  "distractors": [
+    "hello world ",
+    "hello  world",
+    " world world"
+  ],
+  "explanation": "`std::move` doesn't move anything. It's only a cast to an rvalue reference (`T&&`), which *allows* overload resolution to pick a move constructor.\n\n`std::move(a)` has type `std::string&&`, so `b` is move-constructed and steals `a`'s buffer. (`a` is left \"valid but unspecified\"; that's why the program doesn't print it.)\n\n`std::move(c)` has type `const std::string&&`. The move constructor takes a non-const `std::string&&` because it must modify its source, so it can't bind. The copy constructor (`const std::string&`) can, so `d` is a **copy** and `c` still holds `world`.\n\nLesson: `std::move` on a `const` object silently copies. This also happens when you `return std::move(member)` from a `const` member function.",
+  "sources": [
+    {
+      "title": "cppreference: std::move",
+      "url": "https://en.cppreference.com/w/cpp/utility/move"
+    }
+  ]
+}

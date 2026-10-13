@@ -1,0 +1,50 @@
+{
+  "id": "cs-30",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "99% Pixel Accuracy, 0% Useful Tumor Detection",
+  "topics": [
+    "computer-vision",
+    "evaluation-metrics",
+    "imbalanced-data",
+    "deep-learning"
+  ],
+  "difficulty": "advanced",
+  "scenario": "A medical image segmentation model labels each pixel as tumor or background. Only about 1% of pixels are tumor. The model reports 99.2% pixel accuracy, but clinicians notice that it sometimes predicts no tumor at all. The team wants a metric that better reflects overlap of the predicted tumor region with the true tumor region.",
+  "question": "Which metric is the most appropriate primary segmentation metric for this situation?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Pixel accuracy, because every pixel receives a prediction",
+      "is_correct": false,
+      "explanation": "With 99% background pixels, a model can achieve very high accuracy while missing nearly all tumor pixels. Accuracy is dominated by the majority class."
+    },
+    {
+      "id": "b",
+      "text": "Dice coefficient (F1 score computed on the positive segmentation mask), because it directly measures overlap between predicted and true tumor regions",
+      "is_correct": true,
+      "explanation": "Dice balances false positives and false negatives for the positive mask and focuses on the overlap between predicted and true tumor regions. It is much more informative than accuracy when the foreground occupies a tiny fraction of the image."
+    },
+    {
+      "id": "c",
+      "text": "R-squared between the predicted and true pixel values",
+      "is_correct": false,
+      "explanation": "R² is not designed for binary segmentation masks and does not directly express region overlap."
+    },
+    {
+      "id": "d",
+      "text": "Mean squared error on the background pixels only, because most pixels are background",
+      "is_correct": false,
+      "explanation": "This intentionally emphasizes the easy majority class and can reward a model that ignores the clinically important tumor region."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "In segmentation with a tiny foreground, pixel accuracy can be nearly meaningless. Region-overlap metrics such as Dice or IoU focus evaluation on whether the clinically important structure was actually found.",
+  "common_misconception": "Assuming a segmentation problem should be evaluated like ordinary balanced classification just because every pixel has a class label.",
+  "experimentation": {
+    "objective": "Construct a tiny binary mask where the tumor occupies 1% of pixels, compare a trivial all-background prediction with a partially correct tumor prediction, and show why accuracy and Dice tell very different stories.",
+    "data_generation_code": "import numpy as np\n\ndef dice(y_true, y_pred):\n    intersection = np.sum(y_true & y_pred)\n    return 2*intersection / (np.sum(y_true) + np.sum(y_pred) + 1e-9)\n\nH, W = 200, 200\ny_true = np.zeros((H,W), dtype=bool)\ny_true[90:110, 90:110] = True  # small 1% foreground region\n\nall_background = np.zeros_like(y_true)\npartial = np.zeros_like(y_true)\npartial[95:115, 95:115] = True\n\n# Try it yourself:\n# for name, pred in [('all background', all_background), ('partial overlap', partial)]:\n#     accuracy = np.mean(pred == y_true)\n#     print(name, 'accuracy=', accuracy, 'dice=', dice(y_true, pred))\n",
+    "suggested_exploration": "Compare the all-background model with the partial-overlap model. The example shows how a model that completely misses the tumor can still look excellent under pixel accuracy."
+  }
+}

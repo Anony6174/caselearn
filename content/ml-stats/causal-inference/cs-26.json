@@ -1,0 +1,49 @@
+{
+  "id": "cs-26",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "Who Should Receive the Discount?",
+  "topics": [
+    "causal-inference",
+    "experimental-design",
+    "uplift-modeling"
+  ],
+  "difficulty": "advanced",
+  "scenario": "A retailer has a randomized experiment showing that a 20% discount increases purchases overall. The marketing team wants to deploy the discount only to customers for whom it causes an incremental purchase, because discounts given to customers who would buy anyway waste margin.",
+  "question": "Which modeling objective best matches this goal?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Train a standard propensity model to predict who is most likely to purchase",
+      "is_correct": false,
+      "explanation": "A propensity model predicts who is likely to buy, not who is changed by treatment. Customers who would purchase without the discount can receive high propensity scores while having little or no incremental treatment effect."
+    },
+    {
+      "id": "b",
+      "text": "Train a model to predict purchase probability on treated customers only",
+      "is_correct": false,
+      "explanation": "That still focuses on outcome prediction under treatment rather than estimating the difference between treated and untreated potential outcomes."
+    },
+    {
+      "id": "c",
+      "text": "Estimate heterogeneous treatment effects or uplift, comparing the expected outcome under treatment with the expected outcome under control",
+      "is_correct": true,
+      "explanation": "The business objective is incremental impact. Uplift or conditional treatment-effect modeling explicitly targets how much the treatment changes each customer's expected outcome relative to their untreated counterfactual."
+    },
+    {
+      "id": "d",
+      "text": "Target customers with the highest historical spend because they have the highest expected value",
+      "is_correct": false,
+      "explanation": "Historical spend can be correlated with purchase probability but does not establish that the discount caused incremental purchases. High-spend customers may buy regardless."
+    }
+  ],
+  "correct_option_id": "c",
+  "key_takeaway": "Prediction and intervention are different objectives. When the goal is to change behavior rather than identify who is naturally likely to act, estimate treatment effect or uplift instead of optimizing ordinary outcome prediction.",
+  "common_misconception": "Assuming the customers most likely to respond are automatically the customers most influenced by a treatment.",
+  "experimentation": {
+    "objective": "Simulate customers with different treatment effects and compare ranking by baseline purchase probability with ranking by estimated uplift.",
+    "data_generation_code": "import numpy as np\nfrom sklearn.ensemble import RandomForestClassifier\nfrom sklearn.metrics import roc_auc_score\n\nrng = np.random.default_rng(31)\nn = 6000\nx = rng.normal(size=(n,4))\ntreatment = rng.binomial(1, 0.5, size=n)\nbase_logit = 0.5*x[:,0] + 0.3*x[:,1] - 0.2*x[:,2]\ntreatment_effect = 1.2*(x[:,0] > 0) - 0.4*(x[:,1] > 1)\nlogit = base_logit + treatment*treatment_effect\ny = rng.binomial(1, 1/(1+np.exp(-logit)))\n\n# Simple separate outcome models\nm_t = RandomForestClassifier(n_estimators=200, random_state=31).fit(x[treatment==1], y[treatment==1])\nm_c = RandomForestClassifier(n_estimators=200, random_state=31).fit(x[treatment==0], y[treatment==0])\np_t = m_t.predict_proba(x)[:,1]\np_c = m_c.predict_proba(x)[:,1]\nuplift = p_t - p_c\n\n# Try it yourself:\n# rank_by_uplift = np.argsort(uplift)[-200:]\n# rank_by_propensity = np.argsort(p_t)[-200:]\n# Compare the treatment response observed among customers selected by each strategy.\n",
+    "suggested_exploration": "In a fresh simulated holdout, compare the incremental outcome from targeting the top 10% by uplift against targeting the top 10% by treatment purchase probability."
+  }
+}

@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import type { CaseStudy } from "../types/caseStudy";
+import type { ItemStatus } from "../progress/progress";
+import { StatusDot } from "./StatusDot";
 
 interface Props {
   cs: CaseStudy;
-  isComplete?: boolean;
+  status?: ItemStatus;
 }
 
 const difficultyLabel: Record<string, string> = {
@@ -12,7 +14,7 @@ const difficultyLabel: Record<string, string> = {
   advanced: "Advanced",
 };
 
-export function CaseCard({ cs, isComplete = false }: Props) {
+export function CaseCard({ cs, status = "unseen" }: Props) {
   return (
     <Link
       to={`/case/${cs.id}`}
@@ -25,7 +27,7 @@ export function CaseCard({ cs, isComplete = false }: Props) {
             {cs.title}
           </h2>
           <div className="flex items-center gap-2 shrink-0">
-            {isComplete && <span className="completed-dot" title="Completed" />}
+            <StatusDot status={status} />
             <span className={`badge-${cs.difficulty} text-xs font-medium px-2.5 py-0.5 rounded-full`}>
               {difficultyLabel[cs.difficulty]}
             </span>

@@ -1,0 +1,50 @@
+{
+  "id": "cs-28",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The Fine-Tuning Run That Forgot Everything",
+  "topics": [
+    "transfer-learning",
+    "optimization",
+    "overfitting",
+    "deep-learning"
+  ],
+  "difficulty": "advanced",
+  "scenario": "A team fine-tunes a pretrained image classifier for a new manufacturing-defect dataset. Training accuracy rises quickly, but validation accuracy briefly improves and then collapses. When they unfreeze the entire backbone, the pretrained model's generic visual features change rapidly. The same learning rate is used for both the new classification head and the pretrained backbone.",
+  "question": "Which change is the most principled first intervention?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Use the same large learning rate for even more epochs so the pretrained layers adapt completely",
+      "is_correct": false,
+      "explanation": "Large updates to pretrained features can rapidly destroy useful representations, especially when the new dataset is small. Training longer with the same aggressive updates can worsen the problem."
+    },
+    {
+      "id": "b",
+      "text": "Use a smaller learning rate for the pretrained backbone, often freezing it initially and then gradually unfreezing layers while training the new head more aggressively",
+      "is_correct": true,
+      "explanation": "The new head is randomly initialized and needs larger updates, while the pretrained backbone already contains useful features and usually benefits from much smaller updates. Gradual unfreezing and discriminative learning rates reduce catastrophic forgetting while allowing task-specific adaptation."
+    },
+    {
+      "id": "c",
+      "text": "Remove validation because pretrained models should generalize automatically",
+      "is_correct": false,
+      "explanation": "Transfer learning improves the starting representation but does not guarantee generalization to the new domain. Validation remains essential."
+    },
+    {
+      "id": "d",
+      "text": "Add more randomly initialized layers before the pretrained backbone",
+      "is_correct": false,
+      "explanation": "Adding capacity does not address the destructive updates to pretrained parameters and may increase overfitting on the small target dataset."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "Fine-tuning is not simply 'train the whole pretrained model with the same settings.' Newly initialized layers and pretrained layers can need very different learning rates, and gradual unfreezing can preserve useful representations while adapting to the new domain.",
+  "common_misconception": "Treating all parameters in a transfer-learning model as equally uncertain and therefore equally deserving of the same learning rate.",
+  "experimentation": {
+    "objective": "Compare aggressive full-network fine-tuning with a staged strategy that first trains a head and then fine-tunes with a smaller backbone learning rate.",
+    "data_generation_code": "import numpy as np\nfrom sklearn.datasets import make_classification\nfrom sklearn.neural_network import MLPClassifier\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.metrics import accuracy_score\n\n# Toy stand-in for pretrained features + a new task\nX, y = make_classification(n_samples=1200, n_features=80, n_informative=12,\n                           n_classes=3, class_sep=1.2, random_state=51)\nX_train, X_val, y_train, y_val = train_test_split(X, y, stratify=y, test_size=0.3, random_state=51)\n\n# Try it yourself:\n# A practical deep-learning implementation would use a pretrained backbone,\n# freeze its parameters, train the classifier head, then unfreeze later blocks\n# with a learning rate substantially smaller than the head's.\n# Compare validation performance after each stage rather than only training accuracy.\n",
+    "suggested_exploration": "Plot validation accuracy after each fine-tuning stage. The key question is whether allowing more adaptation improves validation performance or merely makes the training set easier to memorize."
+  }
+}

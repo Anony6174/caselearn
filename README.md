@@ -1,32 +1,40 @@
-# React + TypeScript + Vite
+# CaseLearn
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Commit to an answer before you see any feedback, then check your reasoning by
+running code. See [ROADMAP.md](ROADMAP.md) for the learning plan and the
+platform phases.
 
-Currently, two official plugins are available:
+## Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Requires **Node 22.18+** (`nvm use` reads `.nvmrc`).
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev      # builds content, then starts Vite
+npm test         # Vitest
+npm run lint     # oxlint
+npm run build    # builds content, type-checks, bundles to dist/
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Adding content
+
+Every item is one JSON file at `content/<track>/<topic>/<id>.json`; the
+schema is in [src/content/schema.ts](src/content/schema.ts).
+
+- `id` is kebab-case, globally unique, and matches the file name. **Never
+  renumber an id**, because saved progress is keyed by it. New items use
+  `<track-abbr>-<topic-abbr>-NNN`, e.g. `os-sched-001`. The original 40 keep
+  their `cs-NN` ids.
+- `track` must match the top-level folder.
+- Set `verified: true` only after you have checked the answer key yourself.
+
+`npm run content` validates everything and writes the bundled
+`public/content/` (generated, not committed). Any invalid item fails the
+build with the file name and the problem.
+
+## Progress
+
+Progress is stored in the browser's `localStorage` (`caselearn_progress_v2`):
+one record per attempt, with whether it was correct. Old v1 progress is
+migrated automatically. Use **Export / Import** at the bottom of the home page
+to back it up or move it to another browser.

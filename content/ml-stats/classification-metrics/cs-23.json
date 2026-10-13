@@ -1,0 +1,49 @@
+{
+  "id": "cs-23",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The Review Team Can Only Handle 100 Alerts",
+  "topics": [
+    "classification-metrics",
+    "imbalanced-data",
+    "threshold-selection"
+  ],
+  "difficulty": "advanced",
+  "scenario": "A content-safety model scores 200,000 posts per hour, but the human review team can inspect only the 100 highest-risk posts. Missing a truly harmful post is expensive, while reviewing an additional benign post is relatively cheap. The team currently chooses a threshold that gives the best overall F1 score.",
+  "question": "Which evaluation strategy best matches the actual operational constraint?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Optimize accuracy because the model sees many more benign posts than harmful ones",
+      "is_correct": false,
+      "explanation": "Accuracy is dominated by the majority class and does not reflect the fixed capacity of the review team."
+    },
+    {
+      "id": "b",
+      "text": "Optimize ROC-AUC because it summarizes the model across every possible threshold",
+      "is_correct": false,
+      "explanation": "ROC-AUC is useful for ranking quality, but it does not directly answer how many true harmful posts appear in the top 100 cases the team can actually review."
+    },
+    {
+      "id": "c",
+      "text": "Evaluate precision@100 and recall@100, because the real decision is which 100 scored posts receive human review",
+      "is_correct": true,
+      "explanation": "The operational policy is top-k triage with k=100, not arbitrary threshold classification. Precision@100 tells how many reviewed posts are actually harmful, while recall@100 tells how much of the harmful population the fixed review capacity captures."
+    },
+    {
+      "id": "d",
+      "text": "Choose the threshold that maximizes specificity",
+      "is_correct": false,
+      "explanation": "Specificity measures the true-negative rate and ignores the fixed top-100 review budget. A threshold can have excellent specificity while still missing many harmful posts or sending too many alerts."
+    }
+  ],
+  "correct_option_id": "c",
+  "key_takeaway": "Evaluation should mirror the decision policy. When capacity is fixed, ranking metrics such as precision@k and recall@k can be more meaningful than a threshold-independent metric or a metric optimized for a different operating regime.",
+  "common_misconception": "Choosing a familiar global metric such as F1 without asking what action is actually taken after the model produces scores.",
+  "experimentation": {
+    "objective": "Simulate a ranked alert stream and compare the threshold that maximizes F1 with the quality of the top-100 alerts.",
+    "data_generation_code": "import numpy as np\nfrom sklearn.datasets import make_classification\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.model_selection import train_test_split\n\nX, y = make_classification(n_samples=20000, n_features=20, weights=[0.985,0.015],\n                           n_informative=7, flip_y=0.01, random_state=12)\nX_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, test_size=0.4, random_state=12)\nmodel = LogisticRegression(max_iter=3000).fit(X_train, y_train)\nscores = model.predict_proba(X_test)[:,1]\n\nk = 100\ntop_idx = np.argsort(scores)[-k:][::-1]\nprecision_at_100 = y_test[top_idx].mean()\nrecall_at_100 = y_test[top_idx].sum() / y_test.sum()\n\n# Try it yourself:\n# print('precision@100:', precision_at_100)\n# print('recall@100:', recall_at_100)\n# Then sweep probability thresholds and find the threshold with maximum F1.\n",
+    "suggested_exploration": "Find the F1-maximizing threshold and compare how many alerts it produces with the fixed budget of 100. The threshold producing the best F1 may be operationally impossible."
+  }
+}

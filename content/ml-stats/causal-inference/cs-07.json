@@ -1,0 +1,48 @@
+{
+  "id": "cs-07",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The Hospital With the 'Worse' Mortality Rate",
+  "topics": [
+    "causal-inference",
+    "confounding-variables"
+  ],
+  "difficulty": "advanced",
+  "scenario": "A health-policy analyst compares two hospitals: Hospital A has a 6% overall patient mortality rate, and Hospital B has a 4% overall mortality rate. Based on this, a news article concludes Hospital B provides better care. However, Hospital A is a major trauma center that treats a much higher proportion of critically ill and high-risk patients than Hospital B.",
+  "question": "What should the analyst do before concluding that Hospital B provides better care?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Trust the raw mortality rates since both hospitals have large patient volumes",
+      "is_correct": false,
+      "explanation": "Large sample sizes make the raw percentages precise, but precision does not fix a comparison that ignores a major confounding variable. If Hospital A systematically treats sicker patients, its raw rate will look worse regardless of care quality, no matter how many patients are in each group."
+    },
+    {
+      "id": "b",
+      "text": "Stratify the comparison by patient risk/severity level before comparing mortality rates",
+      "is_correct": true,
+      "explanation": "This is a textbook Simpson's Paradox setup: patient severity is a confounding variable that affects both which hospital a patient goes to and their likelihood of dying, regardless of care quality. Comparing mortality rate within similar severity bands (e.g., high-risk patients at A vs. high-risk patients at B) can reveal a very different - sometimes opposite - conclusion than the raw aggregate rates."
+    },
+    {
+      "id": "c",
+      "text": "Compare only the average age of patients at each hospital",
+      "is_correct": false,
+      "explanation": "Age might be one relevant factor, but it is not necessarily the confounder driving the difference here - the scenario specifically flags patient severity/risk (trauma cases) as the key difference between the hospitals, not age specifically."
+    },
+    {
+      "id": "d",
+      "text": "Increase the sample size at Hospital B to match Hospital A",
+      "is_correct": false,
+      "explanation": "The problem is not that Hospital B's estimate is imprecise due to a small sample - it is that the two raw rates are not comparing like with like. Collecting more of the same kind of patients at Hospital B would not address the mismatch in patient severity between the two hospitals."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "A raw comparison between groups can reverse or disappear once you control for a variable that is related to both the grouping and the outcome. Always ask what could differ between groups besides the thing you are trying to measure.",
+  "common_misconception": "Treating an aggregate statistic as automatically representative of every subgroup within it - this is the essence of Simpson's Paradox.",
+  "experimentation": {
+    "objective": "Build a synthetic dataset where a hospital's raw mortality rate looks worse only because of patient mix, then stratify by severity to see the conclusion reverse.",
+    "data_generation_code": "import numpy as np\nimport pandas as pd\n\nrng = np.random.default_rng(21)\n\n# Hospital A: mostly high-risk patients; Hospital B: mostly low-risk patients\nhospital_a = pd.DataFrame({\n    \"severity\": rng.choice([\"high\", \"low\"], size=1000, p=[0.7, 0.3]),\n})\nhospital_b = pd.DataFrame({\n    \"severity\": rng.choice([\"high\", \"low\"], size=1000, p=[0.2, 0.8]),\n})\n\n# true mortality rates are actually BETTER at Hospital A within each severity group\nmortality_rate = {\"high\": {\"a\": 0.10, \"b\": 0.14}, \"low\": {\"a\": 0.01, \"b\": 0.02}}\n\nhospital_a[\"died\"] = hospital_a[\"severity\"].map(\n    lambda s: rng.random() < mortality_rate[s][\"a\"])\nhospital_b[\"died\"] = hospital_b[\"severity\"].map(\n    lambda s: rng.random() < mortality_rate[s][\"b\"])\n\n# Try it yourself:\n# hospital_a[\"died\"].mean(), hospital_b[\"died\"].mean()          # raw rates\n# hospital_a.groupby(\"severity\")[\"died\"].mean()                  # stratified\n# hospital_b.groupby(\"severity\")[\"died\"].mean()\n",
+    "suggested_exploration": "Compute the raw overall mortality rate for each hospital first, then group by severity and compare within each severity band - see the conclusion flip."
+  }
+}

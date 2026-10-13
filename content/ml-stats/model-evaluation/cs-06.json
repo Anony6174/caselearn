@@ -1,0 +1,48 @@
+{
+  "id": "cs-06",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "99% Accuracy That Wasn't Real",
+  "topics": [
+    "model-evaluation",
+    "overfitting"
+  ],
+  "difficulty": "beginner",
+  "scenario": "A student trains a decision tree with no depth limit on their entire dataset, achieves 99% accuracy, and reports this number as the model's performance in their project report. When the model is later run on new, unseen customer data in a demo, it performs barely better than random guessing.",
+  "question": "What evaluation step, if done before reporting the 99% number, would most likely have caught this problem?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Training a bigger, deeper tree to push accuracy even higher",
+      "is_correct": false,
+      "explanation": "This would likely make the problem worse, not better - an even deeper, more flexible tree memorizes the training data even further, which is precisely the failure mode already occurring here."
+    },
+    {
+      "id": "b",
+      "text": "Evaluating the model on a held-out validation or test set the tree never saw during training",
+      "is_correct": true,
+      "explanation": "The 99% figure was measured on the exact data the tree was allowed to memorize, including its noise and idiosyncrasies - an unlimited-depth decision tree can essentially memorize the training set. A held-out set the model never saw would have exposed the gap between memorization and genuine generalization immediately."
+    },
+    {
+      "id": "c",
+      "text": "Collecting more training data without changing the evaluation process",
+      "is_correct": false,
+      "explanation": "More data can help a model generalize better, but if the evaluation is still measured on data the model was trained on, the reported accuracy will still be optimistic and will not reveal the true generalization gap."
+    },
+    {
+      "id": "d",
+      "text": "Removing all features and retraining",
+      "is_correct": false,
+      "explanation": "Removing all features would leave nothing for the tree to learn from at all. The issue here is not which features were used - it is that performance was measured on the same data used for training, which does not reveal the model's ability to generalize."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "Any performance number measured on the same data a model was trained on should be treated as an upper bound on true performance, not a reliable estimate. A held-out validation/test set (or cross-validation) is the minimum bar for a trustworthy metric.",
+  "common_misconception": "Believing a high accuracy number is meaningful on its own, without asking what data it was measured against.",
+  "experimentation": {
+    "objective": "Train an unconstrained decision tree on a synthetic dataset, compare accuracy on the training set itself vs. a held-out test set, and see the gap directly.",
+    "data_generation_code": "import numpy as np\nfrom sklearn.datasets import make_classification\nfrom sklearn.model_selection import train_test_split\n\nX, y = make_classification(n_samples=300, n_features=15, n_informative=4,\n                            n_redundant=2, flip_y=0.15, random_state=5)\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=5)\n\n# Try it yourself:\n# from sklearn.tree import DecisionTreeClassifier\n# tree = DecisionTreeClassifier(random_state=5)  # no depth limit\n# tree.fit(X_train, y_train)\n# tree.score(X_train, y_train)   # accuracy on data it memorized\n# tree.score(X_test, y_test)     # accuracy on data it never saw\n",
+    "suggested_exploration": "Compare train-set accuracy vs. test-set accuracy for the unconstrained tree, then set max_depth=3 and compare the same two numbers to see the gap shrink."
+  }
+}

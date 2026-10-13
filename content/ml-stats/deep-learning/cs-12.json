@@ -1,0 +1,49 @@
+{
+  "id": "cs-12",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "Loss That Explodes Into NaN",
+  "topics": [
+    "deep-learning",
+    "optimization",
+    "learning-rate"
+  ],
+  "difficulty": "beginner",
+  "scenario": "A team training a neural network sees the training loss decrease normally for the first few iterations, then suddenly spike, oscillate wildly, and eventually become NaN. Nothing about the data or architecture changed mid-training.",
+  "question": "What is the most likely cause, and what's the standard first fix to try?",
+  "options": [
+    {
+      "id": "a",
+      "text": "The learning rate is too high, causing the optimizer to repeatedly overshoot the minimum until the weights diverge; reduce it",
+      "is_correct": true,
+      "explanation": "When the learning rate is too large relative to the curvature of the loss surface, each gradient step overshoots the minimum by more than the previous step undershot it, so the loss oscillates with growing amplitude rather than settling down - eventually producing values large enough to become NaN. Reducing the learning rate (or adding a warmup/decay schedule) is the standard first thing to check."
+    },
+    {
+      "id": "b",
+      "text": "The model is overfitting to the training data",
+      "is_correct": false,
+      "explanation": "Overfitting shows up as training loss continuing to decrease while validation loss gets worse - it doesn't typically cause the training loss itself to spike, oscillate, and blow up to NaN. That specific pattern points to an optimization instability, not a generalization gap."
+    },
+    {
+      "id": "c",
+      "text": "The network needs more layers to have enough capacity",
+      "is_correct": false,
+      "explanation": "Adding capacity doesn't address instability in the optimization process - it would if anything make an already-diverging training run more expensive without addressing why the loss is oscillating out of control in the first place."
+    },
+    {
+      "id": "d",
+      "text": "The dataset is too small for the task",
+      "is_correct": false,
+      "explanation": "A too-small dataset can cause poor generalization or noisy gradient estimates, but the sudden spike-then-diverge pattern here is a hallmark of the step size being too large for the loss landscape's curvature, not a description of a small dataset's typical failure mode."
+    }
+  ],
+  "correct_option_id": "a",
+  "key_takeaway": "A loss that decreases initially and then spikes, oscillates, and diverges to NaN is a classic signature of too high a learning rate. It's usually the first hyperparameter to check before assuming something is wrong with the model or data.",
+  "common_misconception": "Treating any bad training outcome as an architecture or data problem, without first checking whether the optimizer's step size is even appropriate for the loss surface.",
+  "experimentation": {
+    "objective": "Run simple gradient descent on a toy quadratic loss at two different learning rates and watch one converge smoothly while the other diverges.",
+    "data_generation_code": "import numpy as np\n\ndef loss(w):\n    return (w - 3) ** 2   # simple convex loss, minimum at w=3\n\ndef grad(w):\n    return 2 * (w - 3)\n\ndef run_gradient_descent(lr, steps=15, w0=0.0):\n    w = w0\n    history = [w]\n    for _ in range(steps):\n        w = w - lr * grad(w)\n        history.append(w)\n    return history\n\n# Try it yourself:\n# stable_history = run_gradient_descent(lr=0.1)\n# unstable_history = run_gradient_descent(lr=1.1)   # too high for this loss curvature\n# print(stable_history)\n# print(unstable_history)\n",
+    "suggested_exploration": "Run run_gradient_descent with lr=0.1 and lr=1.1 and print both histories - watch the second one grow in magnitude with each step instead of settling near w=3. Try a few learning rates in between to find roughly where the behavior flips."
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "id": "cs-02",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The Fraud Model That Never Flags Fraud",
+  "topics": [
+    "classification-metrics",
+    "imbalanced-data"
+  ],
+  "difficulty": "intermediate",
+  "scenario": "A bank builds a model to flag fraudulent transactions. Out of 100,000 transactions, only 400 (0.4%) are actually fraudulent. The team's first model reports 99.6% accuracy on the test set, and everyone is thrilled - until someone points out the model predicts 'not fraud' for every single transaction.",
+  "question": "Which single metric would have caught this problem immediately, before anyone needed to inspect individual predictions?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Accuracy",
+      "is_correct": false,
+      "explanation": "This is exactly the metric that hid the problem. Because 99.6% of transactions are legitimate, a model that always predicts 'not fraud' still scores 99.6% accuracy - the metric is dominated by the majority class and says nothing about whether any fraud was ever caught."
+    },
+    {
+      "id": "b",
+      "text": "Precision-Recall AUC",
+      "is_correct": true,
+      "explanation": "Precision-Recall AUC focuses specifically on how well the model finds the positive (fraud) class, which is what actually matters here. A model that never predicts fraud would have zero recall and a PR-AUC near the baseline fraud rate, immediately exposing the problem that accuracy hid."
+    },
+    {
+      "id": "c",
+      "text": "ROC-AUC",
+      "is_correct": false,
+      "explanation": "ROC-AUC is a reasonable metric to also track, but with such extreme imbalance it can look deceptively good because the false-positive rate stays low even when recall on the tiny fraud class is poor - the large number of true negatives dominates. PR-AUC is more sensitive to performance specifically on the rare positive class."
+    },
+    {
+      "id": "d",
+      "text": "Mean squared error (MSE)",
+      "is_correct": false,
+      "explanation": "MSE is an error metric for continuous/regression predictions. Fraud detection here is a classification problem (fraud vs. not fraud), so MSE is not the natural fit, and it would not have flagged the all-negative model's failure any more clearly than accuracy would."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "For severely imbalanced classification, accuracy is close to meaningless - its value is dominated by the majority class. Metrics that isolate performance on the minority/positive class (PR-AUC, recall, F1 at a chosen threshold) are what actually reveal whether the model is doing its job.",
+  "common_misconception": "Treating a single 'accuracy' number as sufficient evidence a classifier works, without checking the class distribution first.",
+  "experimentation": {
+    "objective": "Simulate a highly imbalanced fraud dataset, score a trivial 'always predict not-fraud' classifier, and compute accuracy vs. PR-AUC/recall side by side to see how differently they score the same (useless) model.",
+    "data_generation_code": "import numpy as np\nfrom sklearn.datasets import make_classification\n\nX, y = make_classification(\n    n_samples=100_000,\n    n_features=10,\n    weights=[0.996, 0.004],   # ~0.4% fraud, matches the scenario\n    flip_y=0.01,\n    random_state=42,\n)\n\n# Try it yourself:\n# from sklearn.metrics import accuracy_score, average_precision_score, roc_auc_score\n# y_pred_naive = np.zeros_like(y)  # \"always predict not-fraud\"\n# accuracy_score(y, y_pred_naive)\n# average_precision_score(y, y_pred_naive)   # PR-AUC style score\n",
+    "suggested_exploration": "Compute accuracy for the naive all-zero classifier, then compute recall and PR-AUC for the same predictions. Then try scoring a real (if simple) classifier trained on X, y and compare all metrics."
+  }
+}

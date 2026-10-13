@@ -1,0 +1,49 @@
+{
+  "id": "cs-24",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "When Missing Salary Is a Signal",
+  "topics": [
+    "data-leakage",
+    "model-evaluation",
+    "feature-engineering"
+  ],
+  "difficulty": "advanced",
+  "scenario": "A churn model uses customer salary. The company discovers that salary is missing disproportionately often for high-income customers because those customers are more likely to decline the optional field. Median imputation improves cross-validation score slightly, but in production the model performs noticeably worse on customers with missing salary.",
+  "question": "What is the most important next step before simply trying another imputation value?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Delete every row with missing salary so the model sees only complete cases",
+      "is_correct": false,
+      "explanation": "Complete-case analysis can discard a systematic subset of customers and make the training population less representative of production. It can also introduce selection bias when missingness is related to customer characteristics."
+    },
+    {
+      "id": "b",
+      "text": "Treat missingness itself as potentially informative: evaluate a missingness indicator and validate its behavior on a realistic production-like split",
+      "is_correct": true,
+      "explanation": "Here, missingness is not plausibly random: opting out is associated with customer characteristics. A missingness indicator can allow the model to distinguish 'salary is unavailable' from a genuine median salary. More importantly, the validation design should preserve the real missingness process so the model is evaluated under the conditions it will face in production."
+    },
+    {
+      "id": "c",
+      "text": "Replace missing salary with zero because zero clearly means unknown",
+      "is_correct": false,
+      "explanation": "Zero is a real numerical value with a strong semantic meaning. Using it for missingness can create an artificial pattern that the model may exploit unpredictably."
+    },
+    {
+      "id": "d",
+      "text": "Remove salary from the model immediately because any missing feature invalidates supervised learning",
+      "is_correct": false,
+      "explanation": "Missing features are common in production ML. The correct response is to understand the missingness mechanism and design preprocessing and evaluation around it, not automatically discard the feature."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "Missingness can contain signal. Before choosing an imputation strategy, ask why values are missing and whether the same missingness mechanism will exist at inference time; then evaluate the whole preprocessing pipeline on production-like data.",
+  "common_misconception": "Treating missing values as purely technical gaps that can always be safely replaced by a single statistic.",
+  "experimentation": {
+    "objective": "Create a dataset where missingness depends on the underlying feature, then compare plain median imputation with median-plus-missing-indicator.",
+    "data_generation_code": "import numpy as np\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.impute import SimpleImputer\nfrom sklearn.pipeline import make_pipeline\nfrom sklearn.compose import ColumnTransformer\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.metrics import roc_auc_score\n\nrng = np.random.default_rng(14)\nn = 5000\nsalary = rng.lognormal(mean=10.5, sigma=0.5, size=n)\nlogit = -4 + 0.00002*salary\np = 1/(1+np.exp(-logit))\ny = rng.binomial(1, p)\nmissing = salary > np.quantile(salary, 0.8)\nsalary_obs = salary.copy()\nsalary_obs[missing] = np.nan\n\nX = salary_obs.reshape(-1,1)\nX_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, test_size=0.3, random_state=14)\n\nplain = make_pipeline(SimpleImputer(strategy='median'), LogisticRegression(max_iter=2000))\nwith_indicator = make_pipeline(SimpleImputer(strategy='median', add_indicator=True), LogisticRegression(max_iter=2000))\nplain.fit(X_train, y_train); with_indicator.fit(X_train, y_train)\n\n# Try it yourself:\n# print('plain AUC:', roc_auc_score(y_test, plain.predict_proba(X_test)[:,1]))\n# print('indicator AUC:', roc_auc_score(y_test, with_indicator.predict_proba(X_test)[:,1]))",
+    "suggested_exploration": "Evaluate overall AUC and then evaluate only the missing-salary subgroup. This illustrates why an apparently acceptable aggregate score can hide a failure concentrated in a systematic missingness subgroup."
+  }
+}

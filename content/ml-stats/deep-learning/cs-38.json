@@ -1,0 +1,49 @@
+{
+  "id": "cs-38",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The Object Detector That Hates Pencils",
+  "topics": [
+    "deep-learning",
+    "object-detection",
+    "computer-vision"
+  ],
+  "difficulty": "advanced",
+  "scenario": "A team trains a Faster R-CNN model to detect standard office supplies. It detects laptops, mugs, and staplers with 95% mAP. However, it completely fails to detect pencils and pens, often drawing multiple broken bounding boxes or ignoring them entirely, despite having thousands of labeled examples in the training set.",
+  "question": "What architectural configuration specific to region-proposal networks is likely misaligned with the dataset?",
+  "options": [
+    {
+      "id": "a",
+      "text": "The anchor box aspect ratios and scales do not cover extreme dimensions (e.g., very tall/thin or short/wide), making it impossible for the model to propose a bounding box that encompasses a pencil.",
+      "is_correct": true,
+      "explanation": "Models like Faster R-CNN and YOLO use predefined 'anchor boxes' as starting guesses for object boundaries. If the default anchors are mostly square (1:1, 4:3, 16:9), the network mathematically struggles to regress these shapes into extreme aspect ratios like 1:10 (a pencil). The fix is to run K-Means clustering on the dataset's ground-truth bounding boxes to generate custom anchor sizes."
+    },
+    {
+      "id": "b",
+      "text": "The Intersection over Union (IoU) threshold for Non-Maximum Suppression (NMS) is set too low.",
+      "is_correct": false,
+      "explanation": "If NMS IoU was too low, the model would suppress valid overlapping objects. It wouldn't prevent the model from detecting highly isolated pencils, and it wouldn't explain why only long, thin objects are failing."
+    },
+    {
+      "id": "c",
+      "text": "Pencils are too small; the convolutions have pooled away the pixel data before reaching the final layer.",
+      "is_correct": false,
+      "explanation": "While small object detection is hard, pencils are long and take up significant pixel space in one dimension. Furthermore, modern architectures use Feature Pyramid Networks (FPNs) to detect objects at multiple scales."
+    },
+    {
+      "id": "d",
+      "text": "The model is suffering from class imbalance and needs focal loss.",
+      "is_correct": false,
+      "explanation": "The scenario explicitly states there are thousands of labeled examples of pens and pencils, ruling out severe class imbalance as the primary culprit."
+    }
+  ],
+  "correct_option_id": "a",
+  "key_takeaway": "Object detection models rely on anchor boxes to propose regions of interest. If your dataset contains objects with extreme or unusual aspect ratios, you must recalculate the anchor boxes to match your ground truth data distribution.",
+  "common_misconception": "Assuming object detection models learn bounding box shapes entirely from scratch, unaware that the network is actually just predicting offsets from hard-coded, predefined anchor templates.",
+  "experimentation": {
+    "objective": "Demonstrate how a standard square anchor struggles to overlap with a long, thin object, failing the IoU threshold needed to count as a positive match during training.",
+    "data_generation_code": "def iou(box_a, box_b):\n    xa1, ya1, xa2, ya2 = box_a\n    xb1, yb1, xb2, yb2 = box_b\n    inter_area = max(0, min(xa2, xb2) - max(xa1, xb1)) * max(0, min(ya2, yb2) - max(ya1, yb1))\n    area_a = (xa2 - xa1) * (ya2 - ya1)\n    area_b = (xb2 - xb1) * (yb2 - yb1)\n    return inter_area / (area_a + area_b - inter_area)\n\nground_truth_pencil = (50, 50, 60, 200) # Width 10, Height 150 (Aspect 1:15)\nstandard_anchor = (40, 40, 100, 100)    # Width 60, Height 60 (Aspect 1:1)\ncustom_anchor = (45, 45, 65, 205)       # Width 20, Height 160 (Aspect 1:8)\n\n# Try it yourself:\n# print(\"IoU with standard square anchor:\", iou(ground_truth_pencil, standard_anchor))\n# print(\"IoU with custom thin anchor:\", iou(ground_truth_pencil, custom_anchor))\n",
+    "suggested_exploration": "Notice how the IoU with the standard anchor is abysmal (often < 0.3). During training, object detectors ignore anchors that don't meet a minimum IoU threshold with the ground truth. If no anchor fits, the object effectively becomes invisible to the loss function."
+  }
+}

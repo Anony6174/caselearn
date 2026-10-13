@@ -1,0 +1,49 @@
+{
+  "id": "cs-17",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The RNN That Forgets the Beginning of the Sentence",
+  "topics": [
+    "deep-learning",
+    "recurrent-networks",
+    "vanishing-gradients"
+  ],
+  "difficulty": "advanced",
+  "scenario": "A team trains a vanilla (non-gated) recurrent neural network on long text sequences, around 300-500 time steps per sequence, to predict a property of the whole sequence. The model performs reasonably when the answer depends mostly on the last few time steps, but performs poorly whenever the correct answer actually depends on information from very early in the sequence.",
+  "question": "What is the most likely explanation, and which class of architecture is designed to address it?",
+  "options": [
+    {
+      "id": "a",
+      "text": "The hidden state size is too small - just increase the number of hidden units",
+      "is_correct": false,
+      "explanation": "A bigger hidden state gives the network more capacity per time step, but it doesn't change the fact that gradients (and the influence of early information) shrink multiplicatively as they propagate backward through hundreds of time steps - the core issue is about how far information and gradient can travel through time, not how much can be stored at each step."
+    },
+    {
+      "id": "b",
+      "text": "Vanilla RNNs suffer from vanishing gradients over long sequences, since the same shrinking-derivative effect that occurs across deep layers also occurs across time steps; gated architectures like LSTM/GRU, or attention-based architectures like Transformers, are designed specifically to preserve long-range information",
+      "is_correct": true,
+      "explanation": "Backpropagation through time repeatedly multiplies gradients by the recurrent weight matrix and activation derivatives at every time step. Over hundreds of steps, this product typically shrinks toward zero, so information and gradient from early time steps barely influence the final prediction or the weight updates. LSTM/GRU gating mechanisms (and attention in Transformers, which connects distant time steps more directly) were designed specifically to preserve long-range dependencies that vanilla RNNs lose."
+    },
+    {
+      "id": "c",
+      "text": "The learning rate needs to be increased",
+      "is_correct": false,
+      "explanation": "A larger learning rate doesn't restore information that has vanished from the gradient by the time it reaches early time steps - it would amplify whatever gradient signal is left, which is a very different problem than the signal not reaching there at all."
+    },
+    {
+      "id": "d",
+      "text": "The model needs to be trained for many more epochs",
+      "is_correct": false,
+      "explanation": "More epochs of training with the same architecture and the same vanishing-gradient dynamics would not give early time steps meaningfully more influence over the loss - the structural limitation persists regardless of how long training continues."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "Standard RNNs struggle to learn dependencies across long time gaps because gradients vanish as they backpropagate through many time steps, similar to how they vanish through many layers in a very deep feedforward network. Gated recurrent architectures (LSTM, GRU) and attention-based models (Transformers) exist largely to address this limitation.",
+  "common_misconception": "Assuming any RNN can learn arbitrarily long-range dependencies given enough hidden units or training time, without considering the structural vanishing-gradient limitation of the vanilla recurrent architecture itself.",
+  "experimentation": {
+    "objective": "See how the product of per-time-step gradient factors shrinks over a long sequence versus a short one, illustrating why information from early time steps barely reaches the end of a long sequence during backpropagation.",
+    "data_generation_code": "import numpy as np\n\ndef tanh_grad(x):\n    return 1 - np.tanh(x) ** 2\n\nrng = np.random.default_rng(2)\nsequence_length = 200\n# typical RNN hidden pre-activations across time steps\nhidden_preactivations = rng.normal(loc=0.0, scale=1.5, size=sequence_length)\n\n# gradient of the loss at the LAST time step, backpropagated toward the FIRST\n# time step, is (roughly) the product of the per-step tanh derivatives along the way\nper_step_grad = tanh_grad(hidden_preactivations)\n\n# Try it yourself:\n# gradient_reaching_first_step = np.prod(per_step_grad)\n# print(gradient_reaching_first_step)\n# # compare against just the last 10 steps:\n# print(np.prod(per_step_grad[-10:]))\n",
+    "suggested_exploration": "Compute the product of all 200 per-step gradients, then compute the product of just the last 10 - compare the two magnitudes to see how much of the earlier signal has vanished by the time it would reach the start of the sequence."
+  }
+}

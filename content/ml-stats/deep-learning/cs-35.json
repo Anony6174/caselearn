@@ -1,0 +1,49 @@
+{
+  "id": "cs-35",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The Perfectly Translated Gibberish",
+  "topics": [
+    "deep-learning",
+    "evaluation-metrics",
+    "large-language-models"
+  ],
+  "difficulty": "advanced",
+  "scenario": "An engineering team is evaluating a new Neural Machine Translation model from French to English. The model achieves a phenomenally high BLEU score on the test set. However, human evaluators report that while the translations contain all the correct vocabulary, the sentences are often disjointed, politically biased, or miss the contextual nuance of the original phrasing completely.",
+  "question": "Why did the BLEU score fail to flag these terrible translations, and what modern alternative is better suited for this?",
+  "options": [
+    {
+      "id": "a",
+      "text": "BLEU is purely based on exact n-gram overlap between prediction and reference; it cannot evaluate semantic meaning, fluency, or nuance. Semantic metrics like BERTScore should be used instead.",
+      "is_correct": true,
+      "explanation": "BLEU checks if the exact words (and short sequences of words) in the prediction appear in the human reference. A model can scramble word order (beyond the n-gram window) or use perfectly matched vocabulary to state something logically twisted, and BLEU will still score it highly. BERTScore uses pre-trained contextual embeddings to measure semantic similarity, capturing meaning rather than just string matching."
+    },
+    {
+      "id": "b",
+      "text": "BLEU penalizes short sentences too heavily. The team should switch to ROUGE, which measures recall.",
+      "is_correct": false,
+      "explanation": "While BLEU does have a brevity penalty and ROUGE focuses on recall, ROUGE is still largely an n-gram matching metric. It suffers from the exact same fundamental flaw: an inability to understand context, fluency, or semantics."
+    },
+    {
+      "id": "c",
+      "text": "The BLEU score was calculated using a single reference translation; it requires at least 10 human references to measure fluency correctly.",
+      "is_correct": false,
+      "explanation": "While having multiple references improves BLEU's reliability, it still fundamentally measures lexical overlap, not semantic accuracy. Ten references still won't help it catch logical fallacies or nuanced tone shifts."
+    },
+    {
+      "id": "d",
+      "text": "BLEU is intended for summarizing text, not translating it. Perplexity is the standard metric for translation.",
+      "is_correct": false,
+      "explanation": "BLEU was literally designed for translation evaluation (Bilingual Evaluation Understudy). Perplexity measures how surprised a model is by a sequence of tokens, which is useful for language modeling, but doesn't explicitly evaluate translation quality against a reference."
+    }
+  ],
+  "correct_option_id": "a",
+  "key_takeaway": "N-gram overlap metrics (BLEU, ROUGE, METEOR) are legacy heuristics. They are brittle and easily gamable. For modern NLP, evaluating generation quality requires neural metrics (BERTScore, LLM-as-a-judge) that understand semantics and context.",
+  "common_misconception": "Treating legacy NLP metrics as objective, comprehensive measures of quality simply because they are mathematically deterministic.",
+  "experimentation": {
+    "objective": "Demonstrate how a completely grammatically incorrect sentence can achieve high n-gram overlap with a reference.",
+    "data_generation_code": "def simple_unigram_precision(reference, prediction):\n    ref_words = set(reference.lower().split())\n    pred_words = prediction.lower().split()\n    matches = sum(1 for w in pred_words if w in ref_words)\n    return matches / len(pred_words) if pred_words else 0\n\nreference = \"The fast dog chased the smart cat\"\n# A terrible translation that just spits out the vocabulary\nbad_prediction = \"Smart the dog chased fast cat the\"\n\n# Try it yourself:\n# print(\"Unigram Precision:\", simple_unigram_precision(reference, bad_prediction))\n",
+    "suggested_exploration": "Note that the unigram precision is 100% (1.0), even though the translation is complete nonsense. Think about how slightly higher n-grams (bigrams) might catch this specific error, but would still fail on synonymous words (e.g., 'hound' instead of 'dog')."
+  }
+}

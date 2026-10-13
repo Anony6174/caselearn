@@ -1,0 +1,48 @@
+{
+  "id": "cs-33",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The Graph Network Where Everyone Looks the Same",
+  "topics": [
+    "deep-learning",
+    "graph-neural-networks"
+  ],
+  "difficulty": "advanced",
+  "scenario": "A team builds a deep Graph Convolutional Network (GCN) with 15 layers to predict the roles of users in a massive social network. After training, they plot the node embeddings and discover that almost every node in the entire graph has converged to nearly the exact same vector representation, making classification impossible.",
+  "question": "What is the name of this specific phenomenon in GNNs, and what is the standard fix?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Over-fitting; fix it by applying heavy dropout and L2 regularization to the node features.",
+      "is_correct": false,
+      "explanation": "Overfitting usually results in highly distinct, memorized embeddings for training nodes and poor performance on test nodes. It does not cause all node embeddings across the graph to collapse into a single point."
+    },
+    {
+      "id": "b",
+      "text": "Over-smoothing; fix it by significantly reducing the number of layers (e.g., to 2 or 3) or adding skip/residual connections.",
+      "is_correct": true,
+      "explanation": "In a GCN, each layer aggregates features from a node's immediate neighbors. With 15 layers, every node is aggregating information from its 15-hop neighborhood. In most real-world graphs, a 15-hop radius covers almost the entire graph, meaning every node is averaging the exact same global information. This is called over-smoothing."
+    },
+    {
+      "id": "c",
+      "text": "Catastrophic forgetting; fix it by freezing the earlier layers and only training the last 3 layers.",
+      "is_correct": false,
+      "explanation": "Catastrophic forgetting occurs in continual learning when training on new tasks destroys weights learned for old tasks. It is not related to feature aggregation in deep message-passing networks."
+    },
+    {
+      "id": "d",
+      "text": "Gradient explosion; fix it by applying gradient clipping and using a smaller learning rate.",
+      "is_correct": false,
+      "explanation": "Gradient explosion would manifest as NaN losses and highly unstable, astronomical embedding values, not a smooth collapse to a single uniform vector across all nodes."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "Unlike Convolutional Neural Networks (CNNs) which generally benefit from immense depth, standard Graph Neural Networks suffer from over-smoothing if they are too deep. Shallow networks (2-4 layers) are standard unless advanced architectures (like GraphSAGE or specific residual connections) are used.",
+  "common_misconception": "Assuming \"deep learning\" always means \"more layers equals better abstraction,\" ignoring how local message passing geometrically expands across a graph.",
+  "experimentation": {
+    "objective": "Simulate how repeated neighbor averaging quickly causes all nodes to converge to the graph's global mean.",
+    "data_generation_code": "import numpy as np\n\n# Simple 4-node line graph: 0 <-> 1 <-> 2 <-> 3\n# Adjacency matrix with self-loops\nA = np.array([[1, 1, 0, 0],\n              [1, 1, 1, 0],\n              [0, 1, 1, 1],\n              [0, 0, 1, 1]])\n\n# Degree matrix for normalization\nD_inv = np.diag([1/2, 1/3, 1/3, 1/2])\ntransition_matrix = D_inv @ A\n\n# Initial random node features\nfeatures = np.array([[10.0], [0.0], [0.0], [50.0]])\n\n# Try it yourself:\n# h = features\n# for layer in range(10):\n#     h = transition_matrix @ h  # Simulate one GCN layer (averaging neighbors)\n#     print(f\"Layer {layer+1} variance: {np.var(h):.4f}\")\n# print(\"Final representations:\\n\", h)\n",
+    "suggested_exploration": "Run the loop and watch the variance drop to near zero by layer 10. The distinct initial features (10, 0, 0, 50) will have all smoothed out to essentially the same number. Think about how a classifier could possibly distinguish between these nodes now."
+  }
+}

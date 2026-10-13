@@ -1,0 +1,49 @@
+{
+  "id": "cs-18",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The Rare-Disease Model That Never Says Yes",
+  "topics": [
+    "deep-learning",
+    "imbalanced-data",
+    "loss-functions"
+  ],
+  "difficulty": "intermediate",
+  "scenario": "A team trains a neural network to detect a rare disease from patient data, where only about 1% of patients in the training set actually have the disease. Trained with standard (unweighted) cross-entropy loss, the model converges to always predicting 'no disease' and still achieves 99% training accuracy.",
+  "question": "Which training-time technique most directly addresses this, beyond simply choosing a better evaluation metric?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Increase the learning rate",
+      "is_correct": false,
+      "explanation": "A different learning rate would change how quickly the model converges to some solution, but the '99% accuracy by always predicting no' solution is a genuinely low-loss point given unweighted cross-entropy on this class distribution - a different learning rate wouldn't stop the model from settling there."
+    },
+    {
+      "id": "b",
+      "text": "Use a class-weighted loss (weighting the rare class more heavily in the cross-entropy calculation) or resample the training data (oversampling the rare class / undersampling the common class) so the model is actually penalized for missing the rare class",
+      "is_correct": true,
+      "explanation": "With unweighted cross-entropy, predicting 'no disease' for everyone is a strong (if useless) way to minimize loss when 99% of examples are actually negative. Weighting the loss so mistakes on the rare positive class cost more (or resampling so the training data isn't so lopsided) changes what the optimizer is actually incentivized to do, directly counteracting the collapse to the majority class."
+    },
+    {
+      "id": "c",
+      "text": "Add more layers to the network",
+      "is_correct": false,
+      "explanation": "More capacity doesn't change the fact that, under the current loss function and class distribution, always predicting the majority class is already a very low-loss solution - a bigger model can find that same low-loss solution just as easily."
+    },
+    {
+      "id": "d",
+      "text": "Increase the batch size only",
+      "is_correct": false,
+      "explanation": "Batch size affects the variance of gradient estimates, not the fundamental incentive structure created by an imbalanced, unweighted loss function - the majority-class collapse would likely still be the easiest low-loss solution regardless of batch size."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "Under severe class imbalance, unweighted loss functions can make the majority-class-only prediction a genuinely low-loss solution, not just a lazy one. Class-weighted losses or resampling change the training incentive directly, rather than only changing how you measure the resulting model afterward.",
+  "common_misconception": "Treating class imbalance purely as an evaluation-metric problem (which metric to report) without addressing that the training objective itself may be rewarding the majority-class collapse.",
+  "experimentation": {
+    "objective": "Train the same model with and without class weighting on an imbalanced synthetic dataset, and compare how well each one actually detects the rare class.",
+    "data_generation_code": "import numpy as np\nfrom sklearn.datasets import make_classification\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.metrics import recall_score\n\nX, y = make_classification(n_samples=5000, n_features=10, weights=[0.99, 0.01],\n                            flip_y=0.01, random_state=6)\n\n# Try it yourself:\n# unweighted_model = LogisticRegression(max_iter=1000).fit(X, y)\n# weighted_model = LogisticRegression(max_iter=1000, class_weight=\"balanced\").fit(X, y)\n#\n# print(\"recall, unweighted:\", recall_score(y, unweighted_model.predict(X)))\n# print(\"recall, class-weighted:\", recall_score(y, weighted_model.predict(X)))\n",
+    "suggested_exploration": "Compare recall on the positive class between the unweighted and class-weighted models. Try adjusting the imbalance ratio in make_classification to be less extreme (e.g. weights=[0.9, 0.1]) and see whether the gap between the two approaches shrinks."
+  }
+}

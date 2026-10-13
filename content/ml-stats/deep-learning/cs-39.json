@@ -1,0 +1,49 @@
+{
+  "id": "cs-39",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The Chatbot That Forgot How to Speak",
+  "topics": [
+    "deep-learning",
+    "large-language-models",
+    "transfer-learning"
+  ],
+  "difficulty": "advanced",
+  "scenario": "A company takes a highly capable, pre-trained conversational LLM and fine-tunes it extensively on a proprietary database of complex legal contracts to create a legal assistant. After fine-tuning, the model answers legal queries perfectly, but when users greet it with 'Hello, how are you?', the model replies with boilerplate legal indemnification clauses instead of conversational pleasantries.",
+  "question": "What is this phenomenon called, and what is the standard methodology to prevent it?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Catastrophic forgetting; prevent it by using Parameter-Efficient Fine-Tuning (like LoRA) or mixing general instruction data into the legal training dataset.",
+      "is_correct": true,
+      "explanation": "When a neural network is heavily trained on a narrow, highly specific new distribution (legal contracts), the gradient updates severely alter the weights that previously governed general capabilities (conversational tone). This is catastrophic forgetting. Freezing most of the model and training a small adapter (LoRA), or simply keeping a small percentage of conversational data in the legal training mix, preserves the original capabilities."
+    },
+    {
+      "id": "b",
+      "text": "Mode collapse; prevent it by injecting Gaussian noise into the legal text dataset.",
+      "is_correct": false,
+      "explanation": "Mode collapse is a GAN phenomenon where the generator learns to produce only a single, highly realistic image to fool the discriminator. It is not the term for LLMs losing pre-trained conversational skills."
+    },
+    {
+      "id": "c",
+      "text": "Gradient vanishing; prevent it by switching the activation functions to ReLU.",
+      "is_correct": false,
+      "explanation": "Modern LLMs already use non-saturating activations (like SwiGLU or GELU) and residual connections. The model is learning the legal text perfectly, so gradients are clearly flowing fine. It's just overriding old data."
+    },
+    {
+      "id": "d",
+      "text": "Over-smoothing; prevent it by reducing the number of Transformer layers.",
+      "is_correct": false,
+      "explanation": "Over-smoothing is a Graph Neural Network issue where node embeddings homogenize. It does not apply to sequential text generation in Transformers."
+    }
+  ],
+  "correct_option_id": "a",
+  "key_takeaway": "Fine-tuning an LLM on a narrow domain is highly destructive to its general capabilities. You must act carefully to preserve the base model's logic and tone, either via data mixing or parameter-efficient tuning.",
+  "common_misconception": "Assuming that a neural network accumulates knowledge like a human brain, rather than overwriting its weight matrices based strictly on the most recent loss landscape it was exposed to.",
+  "experimentation": {
+    "objective": "Understand how catastrophic forgetting overwrites existing weights.",
+    "data_generation_code": "import numpy as np\n\n# Simplified 1D weight representing \"conversational ability\" (optimal at 10.0)\nweight = 10.0\n\n# Fine-tuning on legal data: The legal loss landscape pulls this weight to -5.0\ndef legal_loss_gradient(w):\n    return 2 * (w - (-5.0))\n\nlr = 0.1\n# Try it yourself:\n# for epoch in range(20):\n#     weight -= lr * legal_loss_gradient(weight)\n#     print(f\"Epoch {epoch+1}, Weight: {weight:.2f}\")\n# # Notice how the 'conversational' value of 10.0 is completely erased.\n",
+    "suggested_exploration": "Run the loop. By epoch 20, the weight is firmly at -5.0. If conversational ability required the weight to be near 10, that capability is entirely gone. Ask yourself: how would updating only 1% of the weights (like LoRA) mitigate this?"
+  }
+}

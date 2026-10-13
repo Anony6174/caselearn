@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import type { CaseStudiesFile, CaseStudy } from "../types/caseStudy";
-import { validateCaseStudy } from "../types/caseStudy";
+import type { TrackFile } from "../content/schema";
+import type { CaseStudy } from "../types/caseStudy";
 
 interface UseCaseStudiesResult {
   caseStudies: CaseStudy[];
@@ -8,20 +8,20 @@ interface UseCaseStudiesResult {
   error: string | null;
 }
 
+// Content is validated by scripts/build-content.ts at build time, so no runtime checks here.
 export function useCaseStudies(): UseCaseStudiesResult {
   const [caseStudies, setCaseStudies] = useState<CaseStudy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/case-studies/case_studies.json")
+    fetch("/content/ml-stats.json")
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<CaseStudiesFile>;
+        return res.json() as Promise<TrackFile>;
       })
       .then((data) => {
-        data.case_studies.forEach(validateCaseStudy);
-        setCaseStudies(data.case_studies);
+        setCaseStudies(data.items.filter((i): i is CaseStudy => i.type === "case-mcq"));
         setLoading(false);
       })
       .catch((err: Error) => {

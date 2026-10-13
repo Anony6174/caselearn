@@ -4,10 +4,11 @@ import { useFilters } from "../hooks/useFilters";
 import { CaseList } from "../components/CaseList";
 import { ProgressBadge } from "../components/ProgressBadge";
 import { FilterBar } from "../components/FilterBar";
+import { ProgressBackup } from "../components/ProgressBackup";
 
 export function HomePage() {
   const { caseStudies, loading, error } = useCaseStudies();
-  const { completed } = useProgress();
+  const { statuses } = useProgress();
   const {
     allTopics,
     selectedTopics,
@@ -18,10 +19,12 @@ export function HomePage() {
     filtered,
   } = useFilters(caseStudies);
 
+  const attempted = caseStudies.filter((c) => statuses.has(c.id));
+  const correctCount = attempted.filter((c) => statuses.get(c.id) === "correct").length;
   const byDifficulty = {
-    beginner: caseStudies.filter((c) => c.difficulty === "beginner" && completed.includes(c.id)).length,
-    intermediate: caseStudies.filter((c) => c.difficulty === "intermediate" && completed.includes(c.id)).length,
-    advanced: caseStudies.filter((c) => c.difficulty === "advanced" && completed.includes(c.id)).length,
+    beginner: attempted.filter((c) => c.difficulty === "beginner").length,
+    intermediate: attempted.filter((c) => c.difficulty === "intermediate").length,
+    advanced: attempted.filter((c) => c.difficulty === "advanced").length,
   };
 
   return (
@@ -52,7 +55,8 @@ export function HomePage() {
         {!loading && !error && (
           <div className="flex flex-wrap items-center justify-center gap-8 mb-10">
             <ProgressBadge
-              completed={completed.length}
+              completed={attempted.length}
+              correct={correctCount}
               total={caseStudies.length}
               byDifficulty={byDifficulty}
             />
@@ -95,7 +99,8 @@ export function HomePage() {
               activeCount={filtered.length}
               totalCount={caseStudies.length}
             />
-            <CaseList caseStudies={filtered} completedIds={completed} />
+            <CaseList caseStudies={filtered} statuses={statuses} />
+            <ProgressBackup />
           </>
         )}
       </main>

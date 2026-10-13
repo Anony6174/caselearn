@@ -150,14 +150,4 @@
     padding: 1rem 1.25rem;
     opacity: 0.55;
   }
-
-  /* Completion indicator on cards */
-  .completed-dot {
-    width: 0.5rem;
-    height: 0.5rem;
-    border-radius: 9999px;
-    background: var(--color-beginner);
-    box-shadow: 0 0 6px var(--color-beginner);
-    flex-shrink: 0;
-  }
 }

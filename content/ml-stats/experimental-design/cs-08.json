@@ -1,0 +1,48 @@
+{
+  "id": "cs-08",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "Stopping the A/B Test Early",
+  "topics": [
+    "experimental-design",
+    "ab-testing"
+  ],
+  "difficulty": "intermediate",
+  "scenario": "A product team launches an A/B test comparing a new checkout button color, planned to run for 14 days to reach the pre-calculated sample size. On day 3, someone checks the p-value out of curiosity and sees p = 0.04. Excited, the team immediately stops the test and ships the new button as the winner.",
+  "question": "What is the main statistical problem with this decision?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Nothing is wrong - a p-value below 0.05 is a p-value below 0.05 regardless of when it is observed",
+      "is_correct": false,
+      "explanation": "The 0.05 threshold assumes you looked at the data once, at a pre-specified sample size. Checking repeatedly and stopping the moment the p-value crosses 0.05 changes the actual probability of a false positive - it is no longer 5%."
+    },
+    {
+      "id": "b",
+      "text": "Repeatedly checking the p-value and stopping as soon as it looks significant inflates the true false-positive rate above the intended 5% (the 'peeking problem')",
+      "is_correct": true,
+      "explanation": "Random fluctuation alone will cause the p-value to dip below 0.05 at some point during a multi-day test a good portion of the time, purely by chance, even when there is no real effect. Stopping the instant that happens - rather than waiting for the pre-planned sample size - means the test is far more likely to declare a 'winner' that is actually noise."
+    },
+    {
+      "id": "c",
+      "text": "The effect size of the button color change is too small to matter",
+      "is_correct": false,
+      "explanation": "This might or might not be true, but it is not the statistical flaw in the team's process - the problem is the decision rule (stop as soon as p < 0.05 is observed), which would inflate the false-positive rate even for a real, meaningful effect."
+    },
+    {
+      "id": "d",
+      "text": "They should have used a chi-square test instead of whatever test produced the p-value",
+      "is_correct": false,
+      "explanation": "Swapping to a different test does not address the underlying issue. Any significance test used this way - checked repeatedly with stopping as soon as it crosses the threshold - suffers from the same inflated false-positive problem."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "A p-value threshold is only valid at the sample size and check frequency it was designed for. Peeking at results and stopping early the moment they look favorable is one of the most common ways A/B tests generate false 'winners.'",
+  "common_misconception": "Believing p < 0.05 means the same thing regardless of how many times you checked or when you decided to stop looking.",
+  "experimentation": {
+    "objective": "Simulate many A/B tests where there is truly no difference between groups, checking the p-value daily and stopping at the first p < 0.05, and measure how often that produces a false 'significant' result compared to checking only once at the end.",
+    "data_generation_code": "import numpy as np\nfrom scipy.stats import ttest_ind\n\nrng = np.random.default_rng(99)\n\ndef simulate_one_test(days=14, daily_n=50):\n    # no real difference between groups -- same distribution for both\n    group_a, group_b = [], []\n    false_positive_from_peeking = False\n    for day in range(1, days + 1):\n        group_a.extend(rng.normal(0, 1, daily_n))\n        group_b.extend(rng.normal(0, 1, daily_n))\n        _, p = ttest_ind(group_a, group_b)\n        if p < 0.05:\n            false_positive_from_peeking = True\n            break\n    _, final_p = ttest_ind(group_a, group_b)\n    return false_positive_from_peeking, final_p < 0.05\n\n# Try it yourself:\n# results = [simulate_one_test() for _ in range(500)]\n# peeking_false_positive_rate = np.mean([r[0] for r in results])\n# fixed_sample_false_positive_rate = np.mean([r[1] for r in results])\n",
+    "suggested_exploration": "Run the simulation across 500 fake experiments (where there is truly no effect) and compare the false-positive rate from 'peek and stop early' against the false-positive rate from waiting for the full 14 days."
+  }
+}

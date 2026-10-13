@@ -1,0 +1,49 @@
+{
+  "id": "cs-31",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The Warped Faces in the Middle",
+  "topics": [
+    "deep-learning",
+    "generative-models",
+    "autoencoders"
+  ],
+  "difficulty": "advanced",
+  "scenario": "A researcher trains a standard deep Autoencoder (AE) to reconstruct high-resolution face images. The reconstructions of the training data look perfect. However, when they take the latent embeddings of two different faces, compute the exact mathematical midpoint between them, and decode that midpoint, the resulting image is just a chaotic blur of noise rather than a blended face.",
+  "question": "What is the primary reason the interpolated latent vector produces noise, and what architecture solves this?",
+  "options": [
+    {
+      "id": "a",
+      "text": "The decoder doesn't have enough layers to process blended features; a deeper network is required.",
+      "is_correct": false,
+      "explanation": "If the decoder can reconstruct the original complex faces perfectly, capacity is not the issue. The issue lies in the latent space itself, not the network's depth."
+    },
+    {
+      "id": "b",
+      "text": "Standard Autoencoders do not regularize their latent space, resulting in severe discontinuities between learned embeddings; Variational Autoencoders (VAEs) solve this by forcing the latent space to follow a continuous distribution.",
+      "is_correct": true,
+      "explanation": "Standard AEs learn discrete, isolated pockets of useful representation to minimize reconstruction error. The space between these pockets is untrained and meaningless. VAEs enforce a continuous, probabilistic latent space (usually Gaussian), ensuring that points between valid embeddings decode into smooth transitions."
+    },
+    {
+      "id": "c",
+      "text": "The interpolation was done linearly instead of spherically (slerp); standard AEs require spherical interpolation.",
+      "is_correct": false,
+      "explanation": "While spherical interpolation (slerp) is better for high-dimensional spaces, a standard AE's latent space is completely unregularized. Even with slerp, the path between two embeddings in a standard AE will likely traverse meaningless, untrained space."
+    },
+    {
+      "id": "d",
+      "text": "The learning rate was too high during training, preventing the model from learning transitional states.",
+      "is_correct": false,
+      "explanation": "Learning rate affects convergence, but does not restructure the fundamental objective function of a standard AE, which inherently ignores the spaces between discrete data points."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "Standard Autoencoders are strictly for reconstruction and compression. For generative tasks like interpolation and sampling, you need models with regularized, continuous latent spaces like VAEs or Diffusion models.",
+  "common_misconception": "Assuming that just because a model can compress and reconstruct data perfectly, it understands the underlying data distribution well enough to generate novel variations.",
+  "experimentation": {
+    "objective": "Visualize how standard autoencoders map data to distant, disconnected points, while VAEs force distributions to overlap, creating meaningful 'middle ground'.",
+    "data_generation_code": "import numpy as np\n\nrng = np.random.default_rng(42)\n# Simulate standard AE latents (tight, distant clusters)\nae_latent_a = rng.normal(loc=-10, scale=0.1, size=2)\nae_latent_b = rng.normal(loc=10, scale=0.1, size=2)\nae_midpoint = (ae_latent_a + ae_latent_b) / 2\n\n# Simulate VAE latents (regularized near origin, continuous)\nvae_latent_a = rng.normal(loc=-1, scale=1.0, size=2)\nvae_latent_b = rng.normal(loc=1, scale=1.0, size=2)\nvae_midpoint = (vae_latent_a + vae_latent_b) / 2\n\n# Try it yourself:\n# print(f'AE midpoint: {ae_midpoint} (Notice how far this is from the clusters)')\n# print(f'VAE midpoint: {vae_midpoint} (Notice it sits nicely in the shared distribution space)')\n",
+    "suggested_exploration": "Notice how the AE midpoint (around 0) is roughly 100 standard deviations away from where the model actually learned to decode data. In the VAE simulation, the midpoint is well within the typical standard deviation of the learned clusters."
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "id": "cs-04",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "Comparing Recovery Time Across Two Small, Skewed Groups",
+  "topics": [
+    "hypothesis-testing",
+    "non-parametric-tests"
+  ],
+  "difficulty": "intermediate",
+  "scenario": "A clinical researcher compares recovery time (in days) between two independent groups of patients - 12 on a new drug, 12 on the standard treatment. A histogram of the pooled recovery times is strongly right-skewed (most patients recover quickly, a few take much longer), and each group has fewer than 15 patients.",
+  "question": "Which test is the most appropriate way to compare recovery time between the two groups?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Independent-samples t-test",
+      "is_correct": false,
+      "explanation": "The independent-samples t-test assumes the underlying data (or at least the sampling distribution of the mean) is approximately normal, and this assumption is most fragile with small samples. With only 12 patients per group and a strongly right-skewed distribution, the t-test's p-value cannot be trusted here."
+    },
+    {
+      "id": "b",
+      "text": "Mann-Whitney U test",
+      "is_correct": true,
+      "explanation": "The Mann-Whitney U test compares the two groups based on ranks rather than raw values, so it does not require normality and is robust to the skew. It is designed exactly for comparing two independent groups with small or non-normal samples."
+    },
+    {
+      "id": "c",
+      "text": "Paired t-test",
+      "is_correct": false,
+      "explanation": "A paired t-test is for two measurements taken on the same subjects (e.g., before/after), where each observation in one group is linked to a specific observation in the other. These are two independent groups of different patients, so there is no natural pairing to exploit."
+    },
+    {
+      "id": "d",
+      "text": "Chi-square test of independence",
+      "is_correct": false,
+      "explanation": "Chi-square tests are for categorical data (comparing proportions/frequencies across categories), not continuous measurements like recovery time in days. Recovery time would need to be converted into categories to use this test, throwing away information the researcher already has."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "When sample sizes are small and the data is visibly skewed, do not default to the t-test just because it is the most familiar comparison test - a rank-based non-parametric alternative like Mann-Whitney U is more appropriate when normality cannot be assumed.",
+  "common_misconception": "Assuming the Central Limit Theorem 'rescues' any comparison of means regardless of sample size - with n=12 per group, it does not reliably do so for a strongly skewed distribution.",
+  "experimentation": {
+    "objective": "Generate two independent right-skewed samples, run both a t-test and a Mann-Whitney U test on them, and compare the p-values - then repeat with much larger samples to see the tests converge.",
+    "data_generation_code": "import numpy as np\n\nrng = np.random.default_rng(11)\n\n# right-skewed recovery times (days), small samples\ngroup_new_drug = rng.gamma(shape=2.0, scale=3.0, size=12)\ngroup_standard = rng.gamma(shape=2.0, scale=4.0, size=12)\n\n# Try it yourself:\n# from scipy.stats import ttest_ind, mannwhitneyu\n# ttest_ind(group_new_drug, group_standard)\n# mannwhitneyu(group_new_drug, group_standard)\n",
+    "suggested_exploration": "Run both tests on the n=12 samples and compare p-values, then regenerate the same two groups with size=200 each and re-run both tests to see how much closer they agree at larger sample sizes."
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "id": "cs-10",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The Forecast That Looked Great Until It Wasn't",
+  "topics": [
+    "data-leakage",
+    "time-series",
+    "model-evaluation"
+  ],
+  "difficulty": "advanced",
+  "scenario": "A data scientist builds a model to predict next-month retail sales using historical monthly data spanning 5 years. They randomly shuffle all the rows and split 80% into training and 20% into a test set, using scikit-learn's default train_test_split. Cross-validated performance looks excellent - but when the model is deployed to actually forecast the next real month, its predictions are far worse than during testing.",
+  "question": "What is the most likely cause of the mismatch between test performance and real-world performance?",
+  "options": [
+    {
+      "id": "a",
+      "text": "The model needs more features to forecast well in production",
+      "is_correct": false,
+      "explanation": "Adding features might help forecasting in general, but it does not explain the specific mismatch between a strong test score and poor real-world performance - that gap points to a flaw in how the test score was measured, not a lack of predictive signal."
+    },
+    {
+      "id": "b",
+      "text": "Random shuffling before splitting let information from the future leak into the training set, inflating the test score (data leakage)",
+      "is_correct": true,
+      "explanation": "With time-ordered data, a random shuffle means some training examples come from months after some test examples. Sales trends, seasonality, and macro conditions carry over from month to month, so the model can effectively 'see the future' relative to some test points during training - something impossible in real deployment, where only the past is ever available. That is why the test score looked far better than real-world forecasting performance."
+    },
+    {
+      "id": "c",
+      "text": "The model architecture is too simple for the data",
+      "is_correct": false,
+      "explanation": "A too-simple model would usually show up as mediocre performance on the test set itself, not as a large, specific gap between test performance and true forecast performance in deployment. The gap described here is a classic signature of information leaking across the train/test boundary, not underfitting."
+    },
+    {
+      "id": "d",
+      "text": "The target variable should have been normalized before training",
+      "is_correct": false,
+      "explanation": "Normalization affects the scale the model trains on, but it would not explain why performance measured on a random shuffled split looks so much better than performance on genuinely future, unseen data - that specific pattern points to how the split itself was constructed."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "For time-ordered data, a random train/test split can leak future information into training and produce a test score that does not reflect real forecasting ability. Always split chronologically (train on the past, test on a later period) for time series.",
+  "common_misconception": "Treating train_test_split's default shuffling as safe for any dataset, without considering whether the rows have a time order that a model should not be allowed to see across.",
+  "experimentation": {
+    "objective": "Build a time-series dataset with a trend, compare performance from a random shuffled split vs. a chronological split, and see how much more optimistic the shuffled version looks.",
+    "data_generation_code": "import numpy as np\n\nrng = np.random.default_rng(30)\n\nmonths = np.arange(60)                       # 5 years of monthly data\ntrend = 1000 + 15 * months                    # upward trend over time\nseasonality = 200 * np.sin(2 * np.pi * months / 12)\nsales = trend + seasonality + rng.normal(0, 50, size=months.shape)\n\nX = months.reshape(-1, 1)\ny = sales\n\n# Try it yourself:\n# from sklearn.model_selection import train_test_split\n# from sklearn.linear_model import LinearRegression\n#\n# # (A) random shuffled split -- leaks future info into training\n# X_train_r, X_test_r, y_train_r, y_test_r = train_test_split(X, y, test_size=0.2, random_state=1)\n#\n# # (B) chronological split -- train on the past, test on the most recent months\n# split_point = int(len(X) * 0.8)\n# X_train_c, X_test_c = X[:split_point], X[split_point:]\n# y_train_c, y_test_c = y[:split_point], y[split_point:]\n#\n# model_r = LinearRegression().fit(X_train_r, y_train_r)\n# model_c = LinearRegression().fit(X_train_c, y_train_c)\n# model_r.score(X_test_r, y_test_r), model_c.score(X_test_c, y_test_c)\n",
+    "suggested_exploration": "Fit and score a model under both splitting strategies and compare the R² scores - then imagine deploying each model to forecast month 61, which never appeared in either training set, and think about which test score you would actually trust."
+  }
+}

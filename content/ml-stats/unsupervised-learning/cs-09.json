@@ -1,0 +1,48 @@
+{
+  "id": "cs-09",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "Segmenting a Curved Customer Cluster",
+  "topics": [
+    "unsupervised-learning",
+    "clustering"
+  ],
+  "difficulty": "intermediate",
+  "scenario": "A marketing analyst wants to segment customers based on two behavioral features. A scatterplot of the data shows one dense, roughly circular blob of casual customers, and a second group of high-value customers forming a long, curved, sparser band running along the edge of the plot - plus a handful of clearly anomalous customers scattered far from both groups.",
+  "question": "Which clustering approach is best suited to this data?",
+  "options": [
+    {
+      "id": "a",
+      "text": "K-means with k=2",
+      "is_correct": false,
+      "explanation": "K-means assumes clusters are roughly spherical and similar in density, and it assigns every point to some cluster. The curved, elongated band of high-value customers is not spherical, and K-means would likely split it unnaturally or blend it with the other group - and it would forcibly assign the anomalous customers to one of the two clusters instead of flagging them as unusual."
+    },
+    {
+      "id": "b",
+      "text": "DBSCAN (density-based clustering)",
+      "is_correct": true,
+      "explanation": "DBSCAN groups points based on local density and does not assume any particular cluster shape, so it can follow the curved band of high-value customers as its own cluster while still separating the dense circular blob. It also naturally labels the scattered anomalous customers as noise/outliers instead of forcing them into a cluster."
+    },
+    {
+      "id": "c",
+      "text": "Hierarchical clustering with complete linkage, cut into 2 clusters",
+      "is_correct": false,
+      "explanation": "Complete linkage tends to produce compact, roughly spherical clusters (similar bias to K-means) and struggles with elongated, curved shapes. It also has no built-in concept of 'noise' - the anomalous customers would be forced into whichever cluster is nearest, distorting the true segments."
+    },
+    {
+      "id": "d",
+      "text": "Manually setting a fixed cluster count of 2 and assigning by nearest centroid",
+      "is_correct": false,
+      "explanation": "This describes essentially the same approach as K-means and inherits the same problems: it cannot represent a curved/elongated cluster shape well and has no mechanism for treating clear outliers separately from the two main groups."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "The right clustering algorithm depends on the shape and density of the clusters in the data, not just how many groups you expect. Density-based methods like DBSCAN handle non-spherical shapes and noisy outliers far better than centroid-based methods like K-means.",
+  "common_misconception": "Reaching for K-means as the default clustering algorithm without first visualizing whether the data's clusters are actually spherical and similarly sized.",
+  "experimentation": {
+    "objective": "Generate a dataset with one circular blob, one curved/elongated cluster, and a few noise points, then cluster it with both K-means and DBSCAN and compare how each one handles the curved cluster and the outliers.",
+    "data_generation_code": "import numpy as np\n\nrng = np.random.default_rng(15)\n\n# dense circular blob\nblob = rng.normal(loc=[0, 0], scale=0.5, size=(150, 2))\n\n# curved band cluster (a noisy arc)\ntheta = np.linspace(0, np.pi, 150)\narc = np.column_stack([3 * np.cos(theta), 3 * np.sin(theta)]) + rng.normal(0, 0.15, (150, 2))\narc += [4, 0]\n\n# a few anomalous/noise points scattered far away\nnoise = rng.uniform(-8, 8, size=(8, 2))\n\nX = np.vstack([blob, arc, noise])\n\n# Try it yourself:\n# from sklearn.cluster import KMeans, DBSCAN\n# kmeans_labels = KMeans(n_clusters=2, random_state=0, n_init=10).fit_predict(X)\n# dbscan_labels = DBSCAN(eps=0.6, min_samples=5).fit_predict(X)  # -1 = noise\n",
+    "suggested_exploration": "Plot X colored by kmeans_labels, then plot it again colored by dbscan_labels, and see which one actually separates the curved cluster from the blob and which one correctly flags the 8 outliers as noise."
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "id": "cs-21",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The Fraud Model With 'Perfect' Probabilities",
+  "topics": [
+    "classification-metrics",
+    "model-evaluation",
+    "calibration"
+  ],
+  "difficulty": "advanced",
+  "scenario": "A fraud model has a strong ROC-AUC of 0.94. The risk team now wants to use its predicted probability directly as an expected-loss estimate: a transaction scored 0.80 should contain roughly 80% fraud risk among similar transactions. When they bucket predictions, transactions predicted at 0.8 are fraudulent only about 0.35 of the time, and those predicted at 0.2 are fraudulent about 0.08 of the time.",
+  "question": "What should the team investigate or fix before using the model's probabilities to make expected-cost decisions?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Increase the ROC-AUC further; a higher AUC guarantees better probability estimates",
+      "is_correct": false,
+      "explanation": "ROC-AUC measures ranking quality: whether positives tend to receive higher scores than negatives. A model can rank cases extremely well while its numerical probabilities are badly calibrated."
+    },
+    {
+      "id": "b",
+      "text": "Calibrate the model's predicted probabilities on separate validation data, using a method such as Platt scaling or isotonic regression",
+      "is_correct": true,
+      "explanation": "The observed frequencies differ substantially from the predicted probabilities, which is a calibration problem. Calibration methods learn a mapping from the model's raw scores to probabilities that better match observed event frequencies. Calibration should be performed on data not used to fit the original model."
+    },
+    {
+      "id": "c",
+      "text": "Convert every probability to a hard 0/1 prediction before computing expected cost",
+      "is_correct": false,
+      "explanation": "Hard labels throw away the probability information the risk team explicitly wants to use. The problem is that the probabilities are not trustworthy as probabilities, not that probabilities should be discarded."
+    },
+    {
+      "id": "d",
+      "text": "Use accuracy instead of ROC-AUC because accuracy directly measures probability quality",
+      "is_correct": false,
+      "explanation": "Accuracy evaluates thresholded class decisions and says nothing about whether a predicted 0.8 corresponds to an 80% event frequency. It is not a calibration metric."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "A model can discriminate well and still be poorly calibrated. When predicted probabilities themselves drive pricing, reserves, triage, or expected-cost decisions, calibration must be evaluated and, when needed, corrected separately from ranking metrics.",
+  "common_misconception": "Assuming a high ROC-AUC means a model's probability values can automatically be interpreted literally.",
+  "experimentation": {
+    "objective": "Create a classifier whose scores rank examples well but whose predicted probabilities are systematically overconfident, then compare a reliability diagram and calibration error before and after calibration.",
+    "data_generation_code": "import numpy as np\nfrom sklearn.datasets import make_classification\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.calibration import CalibratedClassifierCV, calibration_curve\nfrom sklearn.metrics import roc_auc_score\n\nX, y = make_classification(n_samples=3000, n_features=12, n_informative=6, random_state=4)\nX_train, X_tmp, y_train, y_tmp = train_test_split(X, y, test_size=0.4, random_state=4)\nX_cal, X_test, y_cal, y_test = train_test_split(X_tmp, y_tmp, test_size=0.5, random_state=4)\n\nbase = LogisticRegression(C=8, max_iter=3000).fit(X_train, y_train)\nraw_scores = base.predict_proba(X_test)[:,1]\n\n# Try it yourself:\n# print('raw ROC-AUC:', roc_auc_score(y_test, raw_scores))\n# frac_pos, mean_pred = calibration_curve(y_test, raw_scores, n_bins=10)\n# print('raw calibration:', list(zip(mean_pred, frac_pos)))\n#\n# calibrated = CalibratedClassifierCV(base, method='isotonic', cv='prefit').fit(X_cal, y_cal)\n# cal_scores = calibrated.predict_proba(X_test)[:,1]\n# frac_pos2, mean_pred2 = calibration_curve(y_test, cal_scores, n_bins=10)\n# print('calibrated ROC-AUC:', roc_auc_score(y_test, cal_scores))\n# print('calibrated calibration:', list(zip(mean_pred2, frac_pos2)))",
+    "suggested_exploration": "Compare ROC-AUC before and after calibration, then inspect whether predicted probabilities in each bin are closer to the actual fraction of positives."
+  }
+}

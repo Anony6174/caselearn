@@ -1,0 +1,49 @@
+{
+  "id": "cs-34",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "Scaling Up Breaks the Validation Accuracy",
+  "topics": [
+    "deep-learning",
+    "distributed-training",
+    "learning-rate"
+  ],
+  "difficulty": "advanced",
+  "scenario": "A startup is successfully training an image classifier on a single GPU with a batch size of 64. To speed up training, they move to a Distributed Data Parallel (DDP) setup across 8 GPUs, keeping the script identical (batch size=64 per GPU). Training speed increases 8x, but the model converges to a much lower validation accuracy than it did on the single GPU.",
+  "question": "What fundamental hyperparameter rule did they miss when scaling out to multiple GPUs?",
+  "options": [
+    {
+      "id": "a",
+      "text": "They forgot to scale the learning rate up; when the effective batch size increases 8x, the learning rate generally needs to be increased (often linearly) to maintain optimization dynamics.",
+      "is_correct": true,
+      "explanation": "In DDP, a batch size of 64 per GPU across 8 GPUs results in an effective global batch size of 512. Because the gradients are averaged over 8 times as much data, the variance of the gradient decreases, meaning you are taking far fewer, but much more accurate, steps per epoch. To compensate for taking fewer steps, you must increase the step size (learning rate) according to the Linear Scaling Rule."
+    },
+    {
+      "id": "b",
+      "text": "DDP inherently degrades model accuracy due to asynchronous gradient updates; they should use model parallelism instead.",
+      "is_correct": false,
+      "explanation": "Standard DDP is synchronous, not asynchronous. Every GPU waits to average gradients before updating weights. It calculates the exact same mathematical gradients as a single GPU processing a massive batch."
+    },
+    {
+      "id": "c",
+      "text": "They need to reduce the learning rate by 8x to prevent the 8 GPUs from stepping over each other and diverging.",
+      "is_correct": false,
+      "explanation": "This is the exact opposite of the linear scaling rule. Reducing the learning rate when effective batch size increases will result in the model taking tiny, hyper-accurate steps, ultimately getting stuck in sharp local minima and underfitting the data in the given number of epochs."
+    },
+    {
+      "id": "d",
+      "text": "They forgot to disable Batch Normalization, which is mathematically invalid in distributed setups.",
+      "is_correct": false,
+      "explanation": "While standard BatchNorm only normalizes across local GPU batches (which can be slightly noisy), it doesn't usually tank accuracy completely. SyncBatchNorm exists to fix this, but the primary reason for a major accuracy drop when scaling workers identically is failing to scale the learning rate."
+    }
+  ],
+  "correct_option_id": "a",
+  "key_takeaway": "When using Distributed Data Parallel training, your effective batch size is (batch_size_per_gpu * num_gpus). You must scale your learning rate (typically linearly: new_lr = old_lr * num_gpus) and apply a gradual learning rate warmup to avoid early divergence.",
+  "common_misconception": "Assuming that throwing more compute hardware at a script is purely a hardware/systems problem that doesn't affect the core mathematical dynamics of the optimization process.",
+  "experimentation": {
+    "objective": "Understand how increasing batch size without changing learning rate reduces the total magnitude of movement in weight space.",
+    "data_generation_code": "import numpy as np\n\n# Simulate 512 total training examples\ntotal_steps_single_gpu = 512 // 64  # 8 steps\ntotal_steps_8_gpus = 512 // 512     # 1 step\n\nbase_lr = 0.01\n# Assume average gradient magnitude is roughly 1.0\ngradient = 1.0 \n\n# Try it yourself:\n# distance_single_gpu = total_steps_single_gpu * (base_lr * gradient)\n# distance_8_gpus_unscaled = total_steps_8_gpus * (base_lr * gradient)\n# distance_8_gpus_scaled = total_steps_8_gpus * ((base_lr * 8) * gradient)\n# \n# print(\"Movement single GPU:\", distance_single_gpu)\n# print(\"Movement 8 GPUs (unscaled LR):\", distance_8_gpus_unscaled) # Notice how little it learns\n# print(\"Movement 8 GPUs (scaled LR):\", distance_8_gpus_scaled)\n",
+    "suggested_exploration": "Observe how the unscaled 8-GPU setup barely moves through the weight space compared to the single GPU. Scaling the LR by the number of GPUs restores the total distance traveled per epoch."
+  }
+}

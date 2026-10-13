@@ -1,0 +1,48 @@
+{
+  "id": "cs-01",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "Rehab Recovery Curve",
+  "topics": [
+    "correlation",
+    "descriptive-statistics"
+  ],
+  "difficulty": "beginner",
+  "scenario": "A physical therapist is studying the relationship between the number of weeks a patient has been in rehab (2 to 40 weeks) and their mobility score (0-100, higher is better). Recovery is fast early on and then plateaus - most of the improvement happens in the first 15 weeks, after which mobility scores level off with diminishing gains. The therapist also has two patients with unusually rapid early recovery (medical outliers) whose mobility scores jumped very early.",
+  "question": "Which correlation coefficient should the therapist use to summarize the strength of the relationship between weeks in rehab and mobility score?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Pearson correlation coefficient",
+      "is_correct": false,
+      "explanation": "Pearson assumes the relationship is linear and is sensitive to outliers. Since recovery here follows a diminishing-returns curve (fast early gains, then a plateau) rather than a straight line, and there are two outlier patients, Pearson's r will understate the true strength of the relationship and can be pulled around by the outliers."
+    },
+    {
+      "id": "b",
+      "text": "Spearman's rank correlation coefficient",
+      "is_correct": true,
+      "explanation": "Spearman correlates the ranks of the two variables rather than their raw values, so it captures any monotonic relationship - including the diminishing-returns curve here - without assuming linearity. It is also far less sensitive to the two outlier patients since it only cares about their rank, not their exact score."
+    },
+    {
+      "id": "c",
+      "text": "Point-biserial correlation",
+      "is_correct": false,
+      "explanation": "Point-biserial correlation is designed for the case where one variable is continuous and the other is a true binary/dichotomous variable (e.g., treatment vs. no treatment). Weeks in rehab and mobility score are both continuous, so this does not apply here."
+    },
+    {
+      "id": "d",
+      "text": "Phi coefficient",
+      "is_correct": false,
+      "explanation": "The phi coefficient measures association between two binary categorical variables. Neither weeks in rehab nor mobility score is binary, so this metric is not defined for this data."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "When a relationship is monotonic but not a straight line, or when outliers are present, rank-based correlation (Spearman, or Kendall's tau for smaller samples) is usually a better summary than Pearson.",
+  "common_misconception": "Defaulting to Pearson's r as 'the' correlation coefficient without first checking (e.g., via a scatterplot) whether the relationship is actually linear.",
+  "experimentation": {
+    "objective": "Generate mobility-score data that follows a diminishing-returns curve with two added outliers, then compute Pearson and Spearman correlation on the same data and compare how differently they respond to the outliers.",
+    "data_generation_code": "import numpy as np\n\nrng = np.random.default_rng(42)\n\nweeks = np.linspace(2, 40, 40)\n# diminishing-returns recovery curve + noise\nmobility = 100 * (1 - np.exp(-weeks / 10)) + rng.normal(0, 3, size=weeks.shape)\n\n# two rapid-recovery outlier patients\nweeks = np.append(weeks, [3, 5])\nmobility = np.append(mobility, [95, 92])\n\n# Try it yourself:\n# from scipy.stats import pearsonr, spearmanr\n# pearsonr(weeks, mobility)\n# spearmanr(weeks, mobility)\n",
+    "suggested_exploration": "Compute Pearson and Spearman on the full data, then remove the two outlier patients and recompute Pearson only - see how much it shifts, while Spearman barely moves."
+  }
+}

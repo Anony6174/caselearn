@@ -1,10 +1,11 @@
 interface Props {
   completed: number;
+  correct: number;
   total: number;
   byDifficulty?: { beginner: number; intermediate: number; advanced: number };
 }
 
-export function ProgressBadge({ completed, total, byDifficulty }: Props) {
+export function ProgressBadge({ completed, correct, total, byDifficulty }: Props) {
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   return (
@@ -12,7 +13,9 @@ export function ProgressBadge({ completed, total, byDifficulty }: Props) {
       <div className="text-center">
         <span className="text-3xl font-extrabold text-[var(--color-accent)]">{completed}</span>
         <span className="text-xl font-semibold text-[var(--color-text-muted)]"> / {total}</span>
-        <p className="text-xs text-[var(--color-text-muted)] mt-0.5">completed</p>
+        <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+          attempted · <span className="text-[var(--color-beginner)]">{correct} correct</span> last try
+        </p>
       </div>
 
       {/* Progress bar */}

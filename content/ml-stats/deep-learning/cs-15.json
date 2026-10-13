@@ -1,0 +1,49 @@
+{
+  "id": "cs-15",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "Is the Bounding Box Actually Right?",
+  "topics": [
+    "deep-learning",
+    "computer-vision",
+    "evaluation-metrics"
+  ],
+  "difficulty": "advanced",
+  "scenario": "A team evaluating an object-detection model reports 'classification accuracy': for each image, they check only whether the predicted class label matches the true object class, ignoring where exactly the predicted bounding box was drawn. Two sample predictions both get marked correct under this scheme - one where the predicted box tightly matches the true object's location, and another where the predicted box only barely overlaps the true object's corner.",
+  "question": "What's the problem with using plain classification accuracy to evaluate this object detector, and what's the standard alternative?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Nothing is wrong - if the class label is right, the detection should count as correct",
+      "is_correct": false,
+      "explanation": "This is exactly the blind spot the scenario is pointing at: a detector that finds the right class but draws the box almost anywhere still gets marked 'correct' under this scheme, even though it's barely locating the object. For most real uses of object detection, where the box is drawn matters as much as what's in it."
+    },
+    {
+      "id": "b",
+      "text": "Mean Average Precision (mAP), which requires a predicted box to overlap the ground-truth box by at least some IoU threshold before counting it as a correct detection, better reflects real detection quality",
+      "is_correct": true,
+      "explanation": "mAP incorporates both whether the class is right and whether the box's location is accurate enough (via an Intersection-over-Union threshold, commonly 0.5) to count as a true positive. This directly distinguishes a tight, accurate box from one that barely overlaps the object, which plain classification accuracy cannot do."
+    },
+    {
+      "id": "c",
+      "text": "Use mean squared error on the box coordinates only, ignoring the class prediction entirely",
+      "is_correct": false,
+      "explanation": "This drops the classification signal entirely, which is just as incomplete in the other direction - a detector needs to be evaluated on both getting the class right and localizing it well, which is exactly what mAP with an IoU threshold combines."
+    },
+    {
+      "id": "d",
+      "text": "Use R-squared on the predicted confidence scores",
+      "is_correct": false,
+      "explanation": "R² measures how well a continuous prediction matches a continuous target on average - it isn't designed to evaluate discrete detection events (right class, right location) and wouldn't capture the localization quality the scenario is asking about."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "Classification accuracy alone doesn't capture localization quality. Object detection evaluation needs a metric like mAP that combines correct classification with a localization threshold (IoU), so a right-class-wrong-location prediction isn't scored the same as a right-class-right-location one.",
+  "common_misconception": "Reusing a plain classification metric for a task (detection/localization) that has an extra dimension - where something is - that the metric was never designed to capture.",
+  "experimentation": {
+    "objective": "Compute Intersection-over-Union for a tight prediction vs. a barely-overlapping prediction against the same ground-truth box, and see how an IoU-thresholded detection criterion tells them apart when plain classification accuracy wouldn't.",
+    "data_generation_code": "import numpy as np\n\ndef iou(box_a, box_b):\n    # box format: (x1, y1, x2, y2)\n    xa1, ya1, xa2, ya2 = box_a\n    xb1, yb1, xb2, yb2 = box_b\n    inter_x1, inter_y1 = max(xa1, xb1), max(ya1, yb1)\n    inter_x2, inter_y2 = min(xa2, xb2), min(ya2, yb2)\n    inter_area = max(0, inter_x2 - inter_x1) * max(0, inter_y2 - inter_y1)\n    area_a = (xa2 - xa1) * (ya2 - ya1)\n    area_b = (xb2 - xb1) * (yb2 - yb1)\n    return inter_area / (area_a + area_b - inter_area)\n\nground_truth_box = (50, 50, 150, 150)\n# two very different predicted boxes, both correctly labeled as the right class\ngood_prediction_box = (55, 55, 145, 145)     # tight, accurate overlap\npoor_prediction_box = (120, 120, 220, 220)   # barely overlaps the true object\n\ngood_iou = iou(ground_truth_box, good_prediction_box)\npoor_iou = iou(ground_truth_box, poor_prediction_box)\n\niou_threshold = 0.5\ngood_counts_as_detection = good_iou >= iou_threshold\npoor_counts_as_detection = poor_iou >= iou_threshold\n\n# Try it yourself:\n# print(\"IoU (good box):\", good_iou, \"-> counts as detection:\", good_counts_as_detection)\n# print(\"IoU (poor box):\", poor_iou, \"-> counts as detection:\", poor_counts_as_detection)\n",
+    "suggested_exploration": "Compute IoU and the counts-as-detection flag for both boxes at threshold 0.5, then try lowering the threshold to 0.3 and see whether the poor prediction now counts as a detection too - and think about what that implies for choosing an IoU threshold."
+  }
+}

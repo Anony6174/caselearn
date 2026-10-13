@@ -1,0 +1,49 @@
+{
+  "id": "cs-37",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The Causal Model That Looked Backward",
+  "topics": [
+    "deep-learning",
+    "time-series",
+    "data-leakage"
+  ],
+  "difficulty": "intermediate",
+  "scenario": "A researcher is training an LSTM to predict the next word in a sequence. They notice the validation loss is nearly zero after just one epoch. Upon inspecting the training loop, they realize they passed the input sequence `[word_1, word_2, word_3]` and the target sequence `[word_1, word_2, word_3]` simultaneously into a bidirectional LSTM.",
+  "question": "Why is the validation loss nearly zero, and why is this model useless for real-world generation?",
+  "options": [
+    {
+      "id": "a",
+      "text": "The model has too many parameters and memorized the validation set perfectly.",
+      "is_correct": false,
+      "explanation": "While memorization happens, it rarely results in a near-zero loss after a single epoch unless there is a flaw in the data pipeline."
+    },
+    {
+      "id": "b",
+      "text": "By using a bidirectional LSTM, the backward-facing hidden state simply read the target word from the 'future' input and passed it directly to the output layer, causing catastrophic data leakage.",
+      "is_correct": true,
+      "explanation": "Autoregressive (next-step) generation requires strict causality—you can only look at the past. A bidirectional LSTM processes the sequence forwards and backwards. If predicting `word_2`, the backward pass has already seen `word_2` (and `word_3`) in the input sequence, effectively giving the model the answers to the test."
+    },
+    {
+      "id": "c",
+      "text": "The learning rate was set too high, causing the optimizer to bypass local minima and hit the absolute minimum instantly.",
+      "is_correct": false,
+      "explanation": "A high learning rate causes divergence (NaN loss), not instantaneous perfect convergence."
+    },
+    {
+      "id": "d",
+      "text": "LSTMs are fundamentally designed to have zero validation loss on language tasks; they are just outdated compared to Transformers.",
+      "is_correct": false,
+      "explanation": "No model is designed to trivially solve language modeling. The architecture choice is irrelevant to the underlying data leakage problem."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "Never use bidirectional models (like Bi-LSTMs or unmasked BERT-style encoders) for autoregressive generation tasks. They inherently violate the arrow of time, leaking future targets into the current prediction step.",
+  "common_misconception": "Thinking that 'bidirectional' just means 'better context,' without realizing it breaks the fundamental requirement of forecasting.",
+  "experimentation": {
+    "objective": "Visualize how a backward pass has access to the target.",
+    "data_generation_code": "sequence = [\"The\", \"cat\", \"sat\"]\n# Task: predict the next word given the sequence up to step t.\n\n# Forward pass at step 1: sees [\"The\"], tries to predict \"cat\"\n# Backward pass at step 1: sees [\"sat\", \"cat\"], trying to predict... \"cat\"\n\n# Try it yourself:\n# def bi_directional_leakage(target_index, sequence):\n#     forward_context = sequence[:target_index]\n#     backward_context = sequence[target_index:]\n#     return f\"Target: {sequence[target_index]} | Fwd sees: {forward_context} | Bwd sees: {backward_context}\"\n#\n# print(bi_directional_leakage(1, sequence)) # Target is 'cat'\n",
+    "suggested_exploration": "Run the code and observe that the backward context literally contains the target word 'cat'. The network will just learn a weight of 1.0 from the first element of the backward context and ignore everything else."
+  }
+}

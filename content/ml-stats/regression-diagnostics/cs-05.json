@@ -1,0 +1,48 @@
+{
+  "id": "cs-05",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The Coefficient That Keeps Flipping Sign",
+  "topics": [
+    "regression-diagnostics",
+    "multicollinearity"
+  ],
+  "difficulty": "advanced",
+  "scenario": "An agricultural scientist fits a linear regression predicting crop yield from rainfall, average temperature, and humidity. When she refits the model on slightly different bootstrap resamples of the same data, the coefficient for humidity flips from strongly positive to strongly negative across resamples, even though the model's overall predictions stay fairly stable. Rainfall and humidity are known to be closely related in this region.",
+  "question": "What is the most likely explanation for the unstable, sign-flipping humidity coefficient?",
+  "options": [
+    {
+      "id": "a",
+      "text": "The model is overfitting because there are too many features relative to the sample size",
+      "is_correct": false,
+      "explanation": "Three predictors is a modest number of features, and overfitting from too many parameters usually shows up as unstable predictions on new data, not specifically as a coefficient flipping sign while overall predictions stay stable. That specific symptom points elsewhere."
+    },
+    {
+      "id": "b",
+      "text": "Multicollinearity between rainfall and humidity is inflating the variance of their individual coefficient estimates",
+      "is_correct": true,
+      "explanation": "When two predictors are highly correlated, the regression has trouble attributing the shared effect to one variable versus the other - the individual coefficients become highly sensitive to small changes in the data (like a different bootstrap sample) even though the model's combined prediction stays stable. A sign-flipping coefficient alongside stable predictions is a classic multicollinearity signature."
+    },
+    {
+      "id": "c",
+      "text": "The target variable (crop yield) needs a log transformation",
+      "is_correct": false,
+      "explanation": "A skewed target can cause other issues (like non-normal residuals or heteroscedasticity), but it does not specifically explain why one coefficient's sign becomes unstable across resamples while predictions stay consistent - that pattern points to a relationship between predictors, not the shape of the target."
+    },
+    {
+      "id": "d",
+      "text": "The sample size is too small to estimate three coefficients reliably",
+      "is_correct": false,
+      "explanation": "If sample size alone were the issue, you would expect noisier estimates across the board, not a specific pattern involving two particular variables (rainfall and humidity) while predictions remain stable. The scientist needs to check the correlation between predictors specifically, not just add more data."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "When individual coefficients are unstable but overall model predictions are not, check for multicollinearity (e.g., via a correlation matrix or variance inflation factor) before assuming the problem is sample size or model complexity.",
+  "common_misconception": "Treating any instability in a model as generic 'overfitting' and reaching for regularization or more data, without diagnosing whether the actual cause is correlated predictors.",
+  "experimentation": {
+    "objective": "Generate rainfall and humidity as correlated variables, fit a regression across several bootstrap resamples, and watch the humidity coefficient's sign and magnitude shift.",
+    "data_generation_code": "import numpy as np\n\nrng = np.random.default_rng(3)\n\nn = 60\nrainfall = rng.normal(100, 15, n)\nhumidity = 0.85 * rainfall + rng.normal(0, 8, n)     # strongly correlated with rainfall\ntemperature = rng.normal(25, 3, n)\n\nyield_ = (0.4 * rainfall + 0.1 * humidity + 0.6 * temperature\n          + rng.normal(0, 5, n))\n\n# Try it yourself:\n# from numpy.linalg import lstsq\n# X = np.column_stack([rainfall, humidity, temperature, np.ones(n)])\n# for seed in range(5):\n#     idx = np.random.default_rng(seed).choice(n, n, replace=True)  # bootstrap resample\n#     coef, *_ = lstsq(X[idx], yield_[idx], rcond=None)\n#     print(coef)  # watch the humidity coefficient (2nd value) change sign/magnitude\n",
+    "suggested_exploration": "Run the bootstrap loop above and print the humidity coefficient each time. Then compute the correlation between rainfall and humidity directly, and compare a model with humidity dropped against the original three-variable model to see how little the predictions change."
+  }
+}

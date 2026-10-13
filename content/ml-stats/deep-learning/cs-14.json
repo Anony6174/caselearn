@@ -1,0 +1,49 @@
+{
+  "id": "cs-14",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The CNN That Memorized 500 Images",
+  "topics": [
+    "deep-learning",
+    "overfitting",
+    "data-augmentation"
+  ],
+  "difficulty": "intermediate",
+  "scenario": "A team trains an image classification CNN from scratch on a small dataset - about 500 images per class, no data augmentation, no dropout. After training, accuracy on the training set reaches nearly 100%, but accuracy on a held-out validation set is far lower, and validation loss actually starts increasing partway through training while training loss keeps falling.",
+  "question": "Which single change would most directly help close this train/validation gap?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Add more convolutional layers to increase the model's capacity",
+      "is_correct": false,
+      "explanation": "This scenario already shows the model has more than enough capacity to fit the training data almost perfectly - adding more capacity would likely make memorization (and the gap) worse, not better."
+    },
+    {
+      "id": "b",
+      "text": "Add data augmentation (and/or regularization like dropout) so the effective diversity of the small training set increases",
+      "is_correct": true,
+      "explanation": "With only 500 images per class and no augmentation, the network can effectively memorize the exact training images rather than learning generalizable features. Data augmentation (random crops, flips, color jitter, etc.) manufactures more varied training examples from the same images, and dropout/regularization discourages over-reliance on specific memorized patterns - both directly target the gap between train and validation performance."
+    },
+    {
+      "id": "c",
+      "text": "Increase the learning rate",
+      "is_correct": false,
+      "explanation": "Learning rate affects how quickly the model reaches wherever it's heading during training - it doesn't address why the model is memorizing the training set rather than generalizing, so it wouldn't close the train/validation gap."
+    },
+    {
+      "id": "d",
+      "text": "Train for many more epochs without any other changes",
+      "is_correct": false,
+      "explanation": "The validation loss is already increasing partway through training while training loss keeps falling - this is the network overfitting further with each additional epoch. Training longer without changing anything else would widen the gap, not close it."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "A large, widening gap between training and validation performance on a small dataset is a classic overfitting signature. Data augmentation and regularization directly counter it by effectively increasing the diversity the model has to generalize across, rather than by changing model capacity or training duration.",
+  "common_misconception": "Assuming a deep learning model's problems are usually solved by adding more layers or training longer, when a small, unaugmented dataset is often the actual bottleneck.",
+  "experimentation": {
+    "objective": "Train a small neural network on a deliberately small synthetic dataset, then compare validation accuracy with and without a simple augmentation (noisy duplicates of the training examples).",
+    "data_generation_code": "import numpy as np\nfrom sklearn.datasets import make_classification\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.neural_network import MLPClassifier\n\n# a deliberately small, noisy dataset - similar to a small labeled image dataset\nX, y = make_classification(n_samples=90, n_features=50, n_informative=8, n_redundant=0,\n                            n_classes=3, n_clusters_per_class=1, flip_y=0.05,\n                            class_sep=1.0, random_state=7)\nX_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.4, random_state=7)\n\ndef augment(X, y, n_copies=6, noise_std=0.5, seed=7):\n    # crude stand-in for data augmentation: noisy duplicates of each training example\n    rng = np.random.default_rng(seed)\n    X_aug = [X]\n    y_aug = [y]\n    for _ in range(n_copies):\n        X_aug.append(X + rng.normal(0, noise_std, X.shape))\n        y_aug.append(y)\n    return np.vstack(X_aug), np.concatenate(y_aug)\n\n# Try it yourself:\n# model = MLPClassifier(hidden_layer_sizes=(128, 64), max_iter=3000, random_state=7)\n# model.fit(X_train, y_train)\n# print(\"train acc (no augmentation):\", model.score(X_train, y_train))\n# print(\"val acc (no augmentation):\", model.score(X_val, y_val))\n#\n# X_train_aug, y_train_aug = augment(X_train, y_train)\n# model_aug = MLPClassifier(hidden_layer_sizes=(128, 64), max_iter=3000, random_state=7)\n# model_aug.fit(X_train_aug, y_train_aug)\n# print(\"train acc (augmented):\", model_aug.score(X_train_aug, y_train_aug))\n# print(\"val acc (augmented):\", model_aug.score(X_val, y_val))\n",
+    "suggested_exploration": "Run the model without augmentation and note the train vs. validation accuracy gap, then run it again on the augmented training set and see how much the validation accuracy improves even though nothing about the model itself changed."
+  }
+}

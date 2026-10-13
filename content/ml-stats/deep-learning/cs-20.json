@@ -1,0 +1,49 @@
+{
+  "id": "cs-20",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The Text Generator That Blows Up Mid-Training",
+  "topics": [
+    "deep-learning",
+    "recurrent-networks",
+    "exploding-gradients"
+  ],
+  "difficulty": "advanced",
+  "scenario": "A team training a recurrent network for text generation sees training proceed smoothly and losses decrease steadily for many epochs, then suddenly the loss jumps to an enormous value and becomes NaN within a couple of iterations, with no change to the learning rate or data.",
+  "question": "What is a standard technique specifically used to prevent this kind of sudden blow-up during RNN training?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Gradient clipping - capping the norm of the gradient before the weight update if it exceeds a chosen threshold",
+      "is_correct": true,
+      "explanation": "In recurrent networks, gradients are computed by backpropagating through many time steps, and if the recurrent weight matrix tends to amplify signals (the opposite of the vanishing-gradient case), the gradient can grow multiplicatively across time steps and occasionally spike to a huge value on some batches - exploding gradients. Clipping the gradient's norm to a maximum value before applying the update prevents any single step from taking a destructively large jump, without requiring a smaller learning rate overall."
+    },
+    {
+      "id": "b",
+      "text": "Increase the model's depth",
+      "is_correct": false,
+      "explanation": "Adding more layers or a larger hidden state doesn't address why the gradient occasionally grows explosively across time steps during backpropagation - it would give the same exploding dynamic more places to occur, not fewer."
+    },
+    {
+      "id": "c",
+      "text": "Increase the batch size",
+      "is_correct": false,
+      "explanation": "A larger batch changes how gradients are averaged across examples in a batch, but doesn't change the fact that backpropagation through many time steps within a single sequence can still produce an exploding gradient regardless of how many sequences are averaged together."
+    },
+    {
+      "id": "d",
+      "text": "Remove all recurrent connections from the model",
+      "is_correct": false,
+      "explanation": "This would eliminate the network's ability to model sequential dependencies at all, rather than addressing the specific numerical instability - exploding gradients are a training stability issue with a much more targeted fix (clipping) than removing the architecture's core mechanism."
+    }
+  ],
+  "correct_option_id": "a",
+  "key_takeaway": "Exploding gradients - a sudden, large spike in gradient magnitude, often followed by NaN losses - are a common failure mode in recurrent networks trained on long sequences. Gradient clipping (capping the gradient norm before the update) is the standard, targeted fix, distinct from lowering the learning rate or changing the architecture.",
+  "common_misconception": "Confusing exploding gradients with vanishing gradients - they're opposite failure modes (gradient magnitude growing vs. shrinking across time steps or layers) with different standard fixes (clipping vs. non-saturating activations/gating).",
+  "experimentation": {
+    "objective": "See how a per-step gradient factor slightly greater than 1 compounds into an enormous value over many time steps, and how clipping bounds the result.",
+    "data_generation_code": "import numpy as np\n\nrng = np.random.default_rng(5)\nsequence_length = 50\n# per-step Jacobian norms slightly greater than 1 (e.g. recurrent weight matrix norm > 1)\nper_step_gradient_norms = rng.normal(loc=1.15, scale=0.05, size=sequence_length)\n\nraw_gradient_magnitude = np.prod(per_step_gradient_norms)  # compounds -> explodes\n\ndef clip_gradient(grad, max_norm=5.0):\n    return min(grad, max_norm)\n\nclipped_gradient_magnitude = clip_gradient(raw_gradient_magnitude, max_norm=5.0)\n\n# Try it yourself:\n# print(\"raw (unclipped) gradient magnitude after 50 steps:\", raw_gradient_magnitude)\n# print(\"gradient magnitude after clipping:\", clipped_gradient_magnitude)\n# # try reducing sequence_length to 10 and see how much smaller the unclipped value becomes\n",
+    "suggested_exploration": "Compare raw_gradient_magnitude to clipped_gradient_magnitude, then reduce sequence_length to 10 and recompute raw_gradient_magnitude to see how much smaller it is over a shorter sequence - the same mechanism, just compounded over fewer steps."
+  }
+}

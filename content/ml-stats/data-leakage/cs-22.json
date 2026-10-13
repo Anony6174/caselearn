@@ -1,0 +1,49 @@
+{
+  "id": "cs-22",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The Cross-Validation Score That Secretly Saw the Answer",
+  "topics": [
+    "data-leakage",
+    "model-evaluation",
+    "cross-validation"
+  ],
+  "difficulty": "advanced",
+  "scenario": "A team has 5,000 patient records and 500 candidate features. Before running 5-fold cross-validation, an engineer removes 50 features whose correlation with the target is weakest using all 5,000 records. The team then performs cross-validation on the reduced feature set and reports the mean CV score as an unbiased estimate.",
+  "question": "What is the main problem with this evaluation procedure?",
+  "options": [
+    {
+      "id": "a",
+      "text": "There are too few folds; unbiased cross-validation requires at least 10 folds",
+      "is_correct": false,
+      "explanation": "The number of folds is a design choice. Five-fold cross-validation is commonly reasonable. The specific issue is that information from every sample was used during feature selection before the folds were evaluated."
+    },
+    {
+      "id": "b",
+      "text": "Feature selection used the labels from the future validation folds, so the cross-validation estimate is optimistic; feature selection must be performed separately inside each training fold",
+      "is_correct": true,
+      "explanation": "Even though the final model fitting occurs within folds, the feature-selection step already inspected the full dataset's target labels. That lets each validation fold influence which features survive, leaking information from validation into the modeling pipeline. The entire selection/preprocessing pipeline must be fit only on each fold's training data."
+    },
+    {
+      "id": "c",
+      "text": "Feature selection based on correlation is never allowed in supervised learning",
+      "is_correct": false,
+      "explanation": "Supervised feature selection can be perfectly valid. The issue is not the particular selection criterion; it is fitting that criterion using information from observations that are supposed to simulate unseen data."
+    },
+    {
+      "id": "d",
+      "text": "Cross-validation itself causes overfitting and should be replaced by training accuracy",
+      "is_correct": false,
+      "explanation": "Cross-validation is specifically used to estimate generalization. Training accuracy would provide a much more optimistic estimate."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "Cross-validation protects you only when every learned step in the pipeline is isolated inside each training fold. Feature selection, scaling, imputation, target encoding, and dimensionality reduction can all leak information if fitted globally before validation.",
+  "common_misconception": "Thinking that leakage only occurs when the target column is explicitly included as an input feature.",
+  "experimentation": {
+    "objective": "Compare a deliberately leaky feature-selection pipeline with a properly nested pipeline and observe the difference in cross-validation performance.",
+    "data_generation_code": "import numpy as np\nfrom sklearn.datasets import make_classification\nfrom sklearn.feature_selection import SelectKBest, mutual_info_classif\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.model_selection import StratifiedKFold, cross_val_score\nfrom sklearn.pipeline import Pipeline\n\nX, y = make_classification(n_samples=1200, n_features=500, n_informative=8,\n                           n_redundant=10, flip_y=0.15, random_state=8)\ncv = StratifiedKFold(n_splits=5, shuffle=True, random_state=8)\n\n# Leaky: feature selection sees all labels before CV\nselector = SelectKBest(mutual_info_classif, k=50)\nX_selected = selector.fit_transform(X, y)\nleaky_scores = cross_val_score(LogisticRegression(max_iter=3000), X_selected, y, cv=cv)\n\n# Correct: selection is refit separately inside each fold\npipe = Pipeline([\n    ('select', SelectKBest(mutual_info_classif, k=50)),\n    ('model', LogisticRegression(max_iter=3000))\n])\nclean_scores = cross_val_score(pipe, X, y, cv=cv)\n\n# Try it yourself:\n# print('leaky CV mean:', leaky_scores.mean())\n# print('proper CV mean:', clean_scores.mean())",
+    "suggested_exploration": "Repeat with a larger number of irrelevant features and stronger label noise. The gap between the leaky and properly isolated pipelines should become easier to see."
+  }
+}

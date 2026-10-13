@@ -1,0 +1,48 @@
+{
+  "id": "cs-13",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "Classifying Digits With the Wrong Loss Function",
+  "topics": [
+    "deep-learning",
+    "loss-functions"
+  ],
+  "difficulty": "intermediate",
+  "scenario": "A student builds a neural network to classify handwritten digits (10 classes) with a softmax output layer, but trains it using mean squared error (MSE) loss between the predicted probability vector and a one-hot encoded label, instead of cross-entropy loss. Training is much slower to converge than expected, and predictions stay unconfident even after many epochs.",
+  "question": "What change would most directly address this training behavior?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Switch the loss function to categorical cross-entropy, the standard pairing for a softmax classification output",
+      "is_correct": true,
+      "explanation": "Cross-entropy's gradient with respect to the pre-softmax activations simplifies to (predicted probability - true label), which stays large whenever the prediction is confidently wrong and only shrinks as the prediction becomes correct. MSE combined with a saturating softmax output can produce a much smaller gradient exactly when the model is most wrong, slowing learning in precisely the cases that need the biggest correction."
+    },
+    {
+      "id": "b",
+      "text": "Add more convolutional layers to the network",
+      "is_correct": false,
+      "explanation": "More capacity doesn't fix a mismatched loss function - the slow, unconfident convergence described here is a direct consequence of the loss/output combination, and a bigger model trained with the same loss would likely show the same sluggish behavior."
+    },
+    {
+      "id": "c",
+      "text": "Increase the number of training epochs substantially",
+      "is_correct": false,
+      "explanation": "Training longer might eventually make some progress, but it's treating the symptom rather than the cause - the underlying issue is that the loss's gradient is small exactly when it should be large (a confidently wrong prediction), which more epochs alone doesn't fix efficiently."
+    },
+    {
+      "id": "d",
+      "text": "Use a larger learning rate",
+      "is_correct": false,
+      "explanation": "A larger learning rate multiplies an already-too-small gradient by a bigger number, which can help a little, but it doesn't address why the gradient is small in the first place, and risks introducing training instability without fixing the fundamental mismatch."
+    }
+  ],
+  "correct_option_id": "a",
+  "key_takeaway": "The choice of loss function should match the task and output activation. Cross-entropy paired with softmax/sigmoid outputs produces a gradient that scales naturally with how wrong the prediction is; MSE paired with a saturating output activation can produce misleadingly small gradients precisely when the model is most wrong.",
+  "common_misconception": "Treating MSE as a safe, generic default loss for any task, without considering how it interacts with the output layer's activation function for classification.",
+  "experimentation": {
+    "objective": "Compare the gradient produced by MSE vs. cross-entropy loss for the exact same confidently-wrong prediction, and see which one actually pushes the model to correct itself.",
+    "data_generation_code": "import numpy as np\n\ndef sigmoid(z):\n    return 1 / (1 + np.exp(-z))\n\n# a confidently wrong prediction: true label = 1, but pre-activation z is very negative\nz = -8.0\ny_true = 1.0\np = sigmoid(z)  # predicted probability, will be close to 0 (confidently wrong)\n\n# gradient of MSE loss w.r.t. z:  dL/dz = (p - y_true) * p * (1 - p)\nmse_grad = (p - y_true) * p * (1 - p)\n\n# gradient of cross-entropy loss w.r.t. z:  dL/dz = (p - y_true)\ncross_entropy_grad = (p - y_true)\n\n# Try it yourself:\n# print(\"predicted probability:\", p)\n# print(\"MSE gradient:\", mse_grad)\n# print(\"Cross-entropy gradient:\", cross_entropy_grad)\n",
+    "suggested_exploration": "Run the code with z = -8.0 (confidently wrong) and compare mse_grad to cross_entropy_grad. Then try z = 0.0 (an uncertain prediction) and see how the two gradients compare in that case instead."
+  }
+}

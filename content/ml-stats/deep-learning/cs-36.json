@@ -1,0 +1,49 @@
+{
+  "id": "cs-36",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The ViT That Couldn't Compete",
+  "topics": [
+    "deep-learning",
+    "computer-vision",
+    "transformers"
+  ],
+  "difficulty": "intermediate",
+  "scenario": "A medical imaging team has a dataset of 8,000 X-ray scans. They decide to upgrade their old ResNet-50 model to a modern Vision Transformer (ViT). They initialize the ViT with random weights and train it from scratch on the 8,000 images. To their surprise, the ViT performs significantly worse than the legacy ResNet-50 model on the validation set, and suffers heavily from overfitting.",
+  "question": "Why did the ViT underperform the CNN when trained from scratch on this dataset?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Vision Transformers lack the spatial inductive biases of CNNs (like translation invariance and local feature grouping) and require massive amounts of data to learn these concepts from scratch.",
+      "is_correct": true,
+      "explanation": "CNNs have built-in assumptions about images: pixels close together are related (convolutions), and an object is the same regardless of where it is (pooling/translation invariance). ViTs treat images as flattened sequences of patches and have to learn these spatial rules entirely from data. 8,000 images is far too few to teach a ViT basic spatial physics. ViTs only outshine CNNs when pre-trained on massive datasets (like JFT-300M or ImageNet-21k) and then fine-tuned."
+    },
+    {
+      "id": "b",
+      "text": "The ViT's patch size was likely too large for medical imaging; switching from 16x16 patches to 2x2 patches would instantly solve the issue.",
+      "is_correct": false,
+      "explanation": "While patch size affects resolution, 2x2 patches would cause the sequence length to explode quadratically, destroying GPU memory. The fundamental issue is data volume and inductive bias, not just patch resolution."
+    },
+    {
+      "id": "c",
+      "text": "Transformers cannot process single-channel grayscale images like X-rays; they are hardcoded for 3-channel RGB.",
+      "is_correct": false,
+      "explanation": "You can easily configure the initial linear projection layer of a ViT to accept 1-channel images. This is a minor structural configuration, not the cause of massive overfitting and underperformance."
+    },
+    {
+      "id": "d",
+      "text": "Medical images require recurrent neural networks (RNNs) to capture the sequential nature of bone structures.",
+      "is_correct": false,
+      "explanation": "2D Medical images are spatial, not sequential. CNNs and ViTs are both appropriate choices, provided the training data constraints are respected."
+    }
+  ],
+  "correct_option_id": "a",
+  "key_takeaway": "Inductive bias matters. CNNs are highly data-efficient because their architecture enforces the rules of vision. Transformers are highly flexible but data-hungry because they assume nothing. Never train a ViT from scratch on a small dataset.",
+  "common_misconception": "Assuming that a newer, more popular architecture (Transformers) is strictly better than older ones (CNNs) in all scenarios, regardless of data constraints.",
+  "experimentation": {
+    "objective": "Understand how CNNs share weights to enforce translation invariance, drastically reducing the number of parameters that need to be learned compared to fully connected/attention layers.",
+    "data_generation_code": "import numpy as np\n\nimage_size = 224\nchannels = 3\n\n# CNN parameter count for a 3x3 filter (inherently translation invariant)\ncnn_params = (3 * 3 * channels) + 1  # weights + bias\n\n# ViT patch projection (Flattened 16x16 patch fully connected to embedding dim 768)\npatch_size = 16\nvit_projection_params = (patch_size * patch_size * channels * 768) + 768\n\n# Try it yourself:\n# print(f\"CNN 3x3 filter parameters: {cnn_params}\")\n# print(f\"ViT patch projection parameters: {vit_projection_params}\")\n",
+    "suggested_exploration": "Notice the massive parameter difference just at the input layer. The CNN uses 28 parameters to look for an edge anywhere in the image. The ViT uses almost 600,000 parameters just to map patches into the network, meaning it has vastly more capacity to overfit a small dataset."
+  }
+}

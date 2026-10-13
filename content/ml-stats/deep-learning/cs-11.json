@@ -1,0 +1,49 @@
+{
+  "id": "cs-11",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The 50-Layer Network That Won't Learn",
+  "topics": [
+    "deep-learning",
+    "vanishing-gradients",
+    "activation-functions"
+  ],
+  "difficulty": "intermediate",
+  "scenario": "A researcher builds a very deep feedforward neural network (50 layers) using sigmoid activation functions throughout, following an older tutorial. After many epochs of training, the loss on the training set has barely moved from its initial value, even though the learning rate seems reasonable and the architecture has plenty of capacity.",
+  "question": "What is the most likely explanation for training barely progressing?",
+  "options": [
+    {
+      "id": "a",
+      "text": "The learning rate is too low - just increase it",
+      "is_correct": false,
+      "explanation": "A low learning rate would produce slow but steady progress. Barely-moving loss across many epochs in a very deep sigmoid network is the signature of a different, structural problem: gradients shrinking as they propagate backward through many layers, not simply a small step size."
+    },
+    {
+      "id": "b",
+      "text": "Vanishing gradients - sigmoid's derivative is at most 0.25, so gradients shrink multiplicatively at each of the 50 layers during backpropagation, leaving almost nothing to update the early layers",
+      "is_correct": true,
+      "explanation": "Each layer's backward pass multiplies the incoming gradient by the local activation derivative. Sigmoid's derivative never exceeds 0.25 and is much smaller when the neuron is saturated, so across 50 layers the gradient reaching the earliest layers can shrink to nearly zero - those layers barely update, and the network stalls. Switching to a non-saturating activation like ReLU, or adding tools like batch normalization or residual connections, is the standard fix."
+    },
+    {
+      "id": "c",
+      "text": "The model needs more training data",
+      "is_correct": false,
+      "explanation": "More data helps a model that is capacity- or generalization-limited, but it does not fix a gradient that is mathematically vanishing before it ever reaches the early layers - no amount of additional examples changes how much a layer's weights get updated per step."
+    },
+    {
+      "id": "d",
+      "text": "The batch size needs to be larger",
+      "is_correct": false,
+      "explanation": "Batch size affects how noisy the gradient estimate is, not how much the gradient magnitude shrinks as it backpropagates through many saturating layers. A larger batch would still transmit an almost-zero gradient to the earliest layers in this setup."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "In very deep networks, saturating activation functions like sigmoid or tanh can cause gradients to vanish as they backpropagate, effectively preventing early layers from learning. Non-saturating activations (ReLU and its variants), normalization layers, and skip/residual connections all exist largely to address this.",
+  "common_misconception": "Assuming stalled training always means the learning rate or amount of data is wrong, without considering whether the gradient is even reaching the earlier layers in meaningful size.",
+  "experimentation": {
+    "objective": "See directly why gradients shrink through many sigmoid layers by multiplying per-layer derivatives together, and compare it to what happens with ReLU's derivative instead.",
+    "data_generation_code": "import numpy as np\n\ndef sigmoid(x):\n    return 1 / (1 + np.exp(-x))\n\ndef sigmoid_grad(x):\n    s = sigmoid(x)\n    return s * (1 - s)\n\nrng = np.random.default_rng(0)\nn_layers = 50\n# assume pre-activations are moderately large (saturating the sigmoid),\n# typical in deep nets without careful initialization\npre_activations = rng.normal(loc=3.0, scale=1.0, size=n_layers)\n\nsigmoid_layer_grads = sigmoid_grad(pre_activations)\nrelu_layer_grads = (pre_activations > 0).astype(float)  # ReLU derivative: 1 if active, else 0\n\n# Try it yourself:\n# cumulative_sigmoid_grad = np.prod(sigmoid_layer_grads)  # gradient reaching layer 1\n# cumulative_relu_grad = np.prod(relu_layer_grads)\n# print(cumulative_sigmoid_grad, cumulative_relu_grad)\n",
+    "suggested_exploration": "Compute the cumulative gradient after 50 sigmoid layers vs. 50 ReLU layers using the code above, then try reducing n_layers to 5 and see how much less severe the shrinkage becomes even for sigmoid."
+  }
+}

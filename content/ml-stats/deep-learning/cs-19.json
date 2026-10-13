@@ -1,0 +1,48 @@
+{
+  "id": "cs-19",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "BatchNorm on a Batch of Two",
+  "topics": [
+    "deep-learning",
+    "normalization"
+  ],
+  "difficulty": "advanced",
+  "scenario": "A team training a 3D medical image segmentation model runs into GPU memory limits and can only fit a batch size of 2 per training step. They keep Batch Normalization layers as-is (as used in a tutorial trained with batch size 64). Training becomes unstable, and validation performance varies wildly between runs.",
+  "question": "What is the most likely contributor to this instability, and what's a reasonable fix?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Batch statistics (mean and variance) computed over a batch of only 2 examples are a very noisy estimate of the true population statistics, making BatchNorm's normalization unreliable; switching to Layer Normalization or Group Normalization, which don't depend on batch size, is a standard fix",
+      "is_correct": true,
+      "explanation": "BatchNorm normalizes each layer's activations using the mean and variance computed across the current batch. With only 2 examples, that estimate can vary enormously from batch to batch, injecting a lot of noise into every layer's normalization and destabilizing training. Layer Norm and Group Norm compute their statistics per-example (across channels/features rather than across the batch), so they remain stable regardless of batch size."
+    },
+    {
+      "id": "b",
+      "text": "Just increase the learning rate to compensate",
+      "is_correct": false,
+      "explanation": "A higher learning rate would amplify whatever unstable, noisy signal is coming out of unreliable batch statistics, likely making the instability worse rather than better - it doesn't address why the normalization itself is noisy."
+    },
+    {
+      "id": "c",
+      "text": "Remove all normalization layers entirely",
+      "is_correct": false,
+      "explanation": "Removing normalization entirely typically reintroduces the problems normalization was added to solve in the first place (e.g., unstable activation scales across layers) - the issue here is specifically that batch-based statistics are unreliable at this batch size, not that normalization in general is unhelpful."
+    },
+    {
+      "id": "d",
+      "text": "Add more convolutional layers to the network",
+      "is_correct": false,
+      "explanation": "Adding more layers doesn't address why the normalization statistics computed from only 2 examples are noisy - it would just mean more layers are being fed an unreliable normalization signal."
+    }
+  ],
+  "correct_option_id": "a",
+  "key_takeaway": "Batch Normalization's reliability depends on having a large enough batch to estimate stable statistics. When memory constraints force very small batch sizes (common with large 3D or high-resolution inputs), batch-independent alternatives like Layer Norm or Group Norm are usually a better fit.",
+  "common_misconception": "Treating Batch Normalization as a drop-in default for any architecture and any batch size, without considering that its core assumption - a large enough batch to estimate reliable statistics - can break down under memory-constrained training.",
+  "experimentation": {
+    "objective": "Directly compare how noisy mean/variance estimates are from a tiny batch versus a larger batch, sampled repeatedly from the same underlying distribution.",
+    "data_generation_code": "import numpy as np\n\nrng = np.random.default_rng(9)\n# assume activations across a layer are drawn from a fixed true distribution\ntrue_mean, true_std = 2.0, 3.0\npopulation = rng.normal(true_mean, true_std, size=100_000)\n\ndef batch_stats(batch_size, n_trials=10):\n    estimates = []\n    for _ in range(n_trials):\n        batch = rng.choice(population, size=batch_size, replace=False)\n        estimates.append((batch.mean(), batch.std()))\n    return estimates\n\n# Try it yourself:\n# tiny_batch_estimates = batch_stats(batch_size=2)     # like BatchNorm with batch size 2\n# large_batch_estimates = batch_stats(batch_size=64)   # a more typical batch size\n# print(\"tiny batch estimates:\", tiny_batch_estimates)\n# print(\"large batch estimates:\", large_batch_estimates)\n",
+    "suggested_exploration": "Run batch_stats with batch_size=2 and batch_size=64 and compare how much the estimated mean and std vary across the 10 trials in each case, relative to the true values (2.0, 3.0) used to generate the population."
+  }
+}

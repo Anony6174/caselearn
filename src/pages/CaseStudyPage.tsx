@@ -5,6 +5,8 @@ import { useProgress } from "../hooks/useProgress";
 import { QuestionPanel } from "../components/QuestionPanel";
 import { ExplanationPanel } from "../components/ExplanationPanel";
 import { SandboxPanel } from "../components/Sandbox/SandboxPanel";
+import { StatusDot } from "../components/StatusDot";
+import { STATUS_LABEL } from "../progress/progress";
 
 const difficultyLabel: Record<string, string> = {
   beginner: "Beginner",
@@ -16,8 +18,10 @@ export function CaseStudyPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { caseStudies, loading, error } = useCaseStudies();
-  const { isComplete, markComplete } = useProgress();
-  const [submitted, setSubmitted] = useState<string | null>(null);
+  const { statusOf, recordAttempt } = useProgress();
+  // Keyed by case id so the reveal doesn't carry over when the URL changes (e.g. browser back).
+  const [submission, setSubmission] = useState<{ caseId: string; choice: string } | null>(null);
+  const submitted = submission && submission.caseId === id ? submission.choice : null;
 
   if (loading) {
     return (
@@ -45,15 +49,14 @@ export function CaseStudyPage() {
 
   const prevCs = idx > 0 ? caseStudies[idx - 1] : null;
   const nextCs = idx < caseStudies.length - 1 ? caseStudies[idx + 1] : null;
-  const alreadyComplete = isComplete(cs.id);
+  const status = statusOf(cs.id);
 
   function handleSubmit(selectedId: string) {
-    setSubmitted(selectedId);
-    markComplete(cs!.id);
+    setSubmission({ caseId: cs!.id, choice: selectedId });
+    recordAttempt({ itemId: cs!.id, chosen: selectedId, correct: selectedId === cs!.correct_option_id });
   }
 
   function goTo(targetId: string) {
-    setSubmitted(null);
     navigate(`/case/${targetId}`);
   }
 
@@ -77,9 +80,9 @@ export function CaseStudyPage() {
           <span className="ml-auto text-xs text-[var(--color-text-muted)]">
             {idx + 1} / {caseStudies.length}
           </span>
-          {alreadyComplete && (
-            <span className="text-xs text-[var(--color-beginner)] flex items-center gap-1.5">
-              <span className="completed-dot" /> Completed
+          {status !== "unseen" && (
+            <span className="text-xs text-[var(--color-text-muted)] flex items-center gap-1.5">
+              <StatusDot status={status} /> {STATUS_LABEL[status]}
             </span>
           )}
         </div>
@@ -119,7 +122,7 @@ export function CaseStudyPage() {
         </div>{/* end narrow wrapper */}
 
         {/* Sandbox — full width, unlocks after submit */}
-        {submitted !== null && (
+        {submitted !== null && cs.experimentation && (
           <div className="border-t border-[var(--color-border)] pt-8 mt-8">
             <SandboxPanel
               experimentation={cs.experimentation}

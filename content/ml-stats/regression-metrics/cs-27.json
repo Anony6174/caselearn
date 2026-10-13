@@ -1,0 +1,49 @@
+{
+  "id": "cs-27",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "Two Demand Models, Same RMSE, Very Different Risk",
+  "topics": [
+    "regression-metrics",
+    "model-evaluation",
+    "uncertainty"
+  ],
+  "difficulty": "advanced",
+  "scenario": "A hospital predicts next-day emergency-department demand. Model A and Model B have almost identical RMSE. However, the operations team must schedule enough staff to keep the probability of severe understaffing below 5%, and they need a forecast interval rather than only a point estimate.",
+  "question": "What should the team evaluate next?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Choose the model with the slightly better RMSE because RMSE already summarizes all predictive uncertainty",
+      "is_correct": false,
+      "explanation": "RMSE evaluates average point-prediction error. It does not tell the team whether uncertainty intervals have appropriate coverage or whether extreme demand is systematically underestimated."
+    },
+    {
+      "id": "b",
+      "text": "Evaluate the calibration/coverage of predictive intervals or quantiles, especially in the high-demand tail",
+      "is_correct": true,
+      "explanation": "The operational decision depends on uncertainty and tail risk. A useful model should provide intervals or quantiles whose empirical coverage matches their stated probabilities and should behave appropriately where severe understaffing occurs."
+    },
+    {
+      "id": "c",
+      "text": "Use R-squared because it is invariant to the unit of demand",
+      "is_correct": false,
+      "explanation": "R² is not a measure of probabilistic uncertainty or interval coverage, so it does not answer the staffing-risk question."
+    },
+    {
+      "id": "d",
+      "text": "Prefer the model with the larger maximum prediction because larger forecasts are always safer",
+      "is_correct": false,
+      "explanation": "Systematically inflating forecasts can reduce one type of risk while creating unnecessary staffing cost. The goal is calibrated uncertainty, not simply larger predictions."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "When decisions depend on risk, point-forecast metrics such as RMSE are not enough. Evaluate probabilistic forecasts using calibration, interval coverage, and tail behavior relevant to the operational cost function.",
+  "common_misconception": "Assuming the model with the best point-prediction error is automatically the best model for risk-sensitive decisions.",
+  "experimentation": {
+    "objective": "Generate demand with heteroscedastic noise and compare a point forecast with prediction intervals, checking whether nominal 90% intervals actually contain the observation about 90% of the time.",
+    "data_generation_code": "import numpy as np\nfrom sklearn.linear_model import LinearRegression\n\nrng = np.random.default_rng(41)\nx = np.linspace(0, 10, 1500)\nnoise_scale = 1 + 0.35*x\nnoise = rng.normal(0, noise_scale)\ny = 20 + 3*x + noise\n\n# Fit a point model on the first 1000 observations\nmodel = LinearRegression().fit(x[:1000,None], y[:1000])\npred = model.predict(x[1000:,None])\nresid = y[:1000] - model.predict(x[:1000,None])\n\n# A simple constant-width interval (intentionally imperfect under heteroscedasticity)\nwidth = 1.645*np.std(resid)\nlower, upper = pred-width, pred+width\ncoverage = np.mean((y[1000:] >= lower) & (y[1000:] <= upper))\n\n# Try it yourself:\n# print('nominal coverage: 0.90')\n# print('observed coverage:', coverage)\n# Then inspect coverage separately for low-x and high-x regions.",
+    "suggested_exploration": "Compute interval coverage in low-demand and high-demand regions separately. Notice that an overall coverage number can hide poor uncertainty estimates in the tail."
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "id": "cs-29",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The Image Classifier With the Wrong Shortcut",
+  "topics": [
+    "computer-vision",
+    "data-augmentation",
+    "overfitting",
+    "deep-learning"
+  ],
+  "difficulty": "advanced",
+  "scenario": "A wildlife classifier distinguishes wolves from dogs with 97% validation accuracy. Investigation reveals that nearly all wolf images were photographed in snowy environments, while dog images were mostly photographed in grass or indoors. A new test set containing wolves in summer forests causes accuracy to collapse.",
+  "question": "What is the most important remedy to improve real-world generalization?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Increase the CNN depth until it can memorize more visual patterns",
+      "is_correct": false,
+      "explanation": "The model already has enough capacity to exploit the shortcut. More capacity can make spurious correlations easier to memorize."
+    },
+    {
+      "id": "b",
+      "text": "Randomly oversample the existing wolf images without changing their visual context",
+      "is_correct": false,
+      "explanation": "Duplicating the same environment does not break the correlation between class and background. It increases sample count without adding the missing variation."
+    },
+    {
+      "id": "c",
+      "text": "Collect or augment data so background and context vary independently of the animal class, then validate on a distribution that reflects deployment conditions",
+      "is_correct": true,
+      "explanation": "The model has learned a spurious but predictive training shortcut: snow versus non-snow. The fix is to break that correlation through diverse data and augmentation that preserves the label while varying context, and to evaluate on a deployment-like test distribution."
+    },
+    {
+      "id": "d",
+      "text": "Use training accuracy as the main metric because background shortcuts improve training fit",
+      "is_correct": false,
+      "explanation": "Training accuracy can remain excellent while the model fails catastrophically when the shortcut disappears. The problem is distribution robustness, so deployment-like validation is critical."
+    }
+  ],
+  "correct_option_id": "c",
+  "key_takeaway": "High validation accuracy is not evidence of robust visual understanding when train and test share hidden environmental correlations. Data collection and augmentation should deliberately break spurious feature-label associations, and evaluation should mimic deployment.",
+  "common_misconception": "Assuming more data from the same distribution is automatically enough to fix shortcut learning.",
+  "experimentation": {
+    "objective": "Create a synthetic vision-like classification problem where the label is correlated with a background feature during training but not at test time, then remove the shortcut with augmentation.",
+    "data_generation_code": "import numpy as np\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.metrics import accuracy_score\n\nrng = np.random.default_rng(61)\nn = 4000\n# x0 = object signal, x1 = background signal\nobject_signal = rng.normal(size=n)\nbackground = rng.normal(size=n)\ny = (object_signal > 0).astype(int)\n\n# Training set: background is spuriously correlated with the label\nbackground_train = np.where(y==1, 2.0, -2.0) + rng.normal(0, 0.5, n)\nX_train = np.column_stack([object_signal, background_train])\n\n# Deployment-like test: background no longer predicts the label\na = rng.normal(size=n)\nX_test = np.column_stack([object_signal, a])\n\nmodel = LogisticRegression().fit(X_train, y)\npred = model.predict(X_test)\n\n# Try it yourself:\n# print('deployment-like accuracy:', accuracy_score(y, pred))\n# Inspect model.coef_ to see whether it relied heavily on background.\n# Then retrain with randomized background values in training to break the shortcut.",
+    "suggested_exploration": "Train once with the spurious background and once after randomizing it independently of the label. Compare deployment-like accuracy and inspect which feature receives more weight."
+  }
+}

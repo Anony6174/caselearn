@@ -1,0 +1,49 @@
+{
+  "id": "cs-25",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "The Model That Aged After a Policy Change",
+  "topics": [
+    "time-series",
+    "model-evaluation",
+    "concept-drift"
+  ],
+  "difficulty": "advanced",
+  "scenario": "A lending model was trained on applications from 2023 and 2024 and achieved excellent random-split validation performance. After a new underwriting policy launches in January 2026, the model's approval-risk discrimination drops sharply. The input distributions have changed, and the relationship between several features and default has also shifted.",
+  "question": "What evaluation approach should the team use to decide whether the model needs retraining for the new regime?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Randomly reshuffle all 2023-2026 records and run another random cross-validation",
+      "is_correct": false,
+      "explanation": "Random mixing blends old and new regimes across training and validation, potentially making the model look better than it will perform on future data under the new policy."
+    },
+    {
+      "id": "b",
+      "text": "Evaluate chronologically, with recent post-policy data held out from training, and monitor both feature distribution shift and changes in the feature-outcome relationship",
+      "is_correct": true,
+      "explanation": "This is a concept-drift problem, not merely a one-time sampling issue. A realistic evaluation should train on information available before deployment and test on later post-policy observations. Monitoring covariate shift and performance/relationship changes helps distinguish population movement from a deeper change in the data-generating process."
+    },
+    {
+      "id": "c",
+      "text": "Only monitor the overall average of each feature because performance metrics are unnecessary after deployment",
+      "is_correct": false,
+      "explanation": "Feature-distribution monitoring can detect covariate shift but cannot prove that predictions remain useful. Performance and outcome-based monitoring are needed when labels become available."
+    },
+    {
+      "id": "d",
+      "text": "Increase model complexity until the old validation score is even higher",
+      "is_correct": false,
+      "explanation": "Higher capacity on the old regime does not address the fact that the relationship itself changed after the policy. It may simply overfit historical data more strongly."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "A model can fail because the world changed, not because the original training process was wrong. Time-aware holdouts and post-deployment monitoring should reflect the regime in which predictions will actually be used.",
+  "common_misconception": "Assuming that a model with strong historical cross-validation remains valid until its architecture is replaced.",
+  "experimentation": {
+    "objective": "Simulate a relationship change halfway through a time series and compare random splitting with chronological evaluation.",
+    "data_generation_code": "import numpy as np\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.metrics import roc_auc_score\n\nrng = np.random.default_rng(22)\nn = 5000\nX = rng.normal(size=(n,3))\nt = np.arange(n)\ncoef = np.where(t[:,None] < 3000, np.array([2.0, -1.0, 0.5]), np.array([-1.0, 1.5, 0.5]))\nlogit = (X * coef).sum(axis=1)\np = 1/(1+np.exp(-logit))\ny = rng.binomial(1, p)\n\n# Random split mixes the two regimes\nXtr, Xte, ytr, yte = train_test_split(X, y, stratify=y, test_size=0.3, random_state=22)\nrandom_model = LogisticRegression(max_iter=2000).fit(Xtr, ytr)\nrandom_auc = roc_auc_score(yte, random_model.predict_proba(Xte)[:,1])\n\n# Chronological split: train on the past, test on the future\nchrono_model = LogisticRegression(max_iter=2000).fit(X[:3000], y[:3000])\nchrono_auc = roc_auc_score(y[3000:], chrono_model.predict_proba(X[3000:])[:,1])\n\n# Try it yourself:\n# print('random-split AUC:', random_auc)\n# print('chronological AUC:', chrono_auc)",
+    "suggested_exploration": "Move the regime-change point and compare several random seeds. Then imagine the chronological test set as 'the next six months' and ask which score is actually useful for deployment."
+  }
+}

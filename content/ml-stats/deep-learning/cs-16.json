@@ -1,0 +1,48 @@
+{
+  "id": "cs-16",
+  "type": "case-mcq",
+  "track": "ml-stats",
+  "verified": false,
+  "title": "Building a Classifier With Only 40 Labeled Images",
+  "topics": [
+    "deep-learning",
+    "transfer-learning"
+  ],
+  "difficulty": "intermediate",
+  "scenario": "A team needs an image classifier for 5 product categories but only has about 40 labeled images per category. They plan to design and train a deep CNN from scratch, initializing all weights randomly.",
+  "question": "Given the data constraint, what approach is most likely to work meaningfully better than training a randomly-initialized CNN from scratch?",
+  "options": [
+    {
+      "id": "a",
+      "text": "Design an even deeper CNN with more parameters",
+      "is_correct": false,
+      "explanation": "More parameters make a data-hungry model even hungrier for data. With only ~40 labeled examples per class, a bigger from-scratch network has even more capacity to overfit and even less chance of learning generalizable features from so few examples."
+    },
+    {
+      "id": "b",
+      "text": "Use transfer learning: start from a network already trained on a large, general image dataset, and fine-tune only the last layer(s) on the small labeled set",
+      "is_correct": true,
+      "explanation": "A pretrained network has already learned general-purpose visual features (edges, textures, shapes) from a much larger dataset than the team has available. Reusing those features and only adapting the final layers to the 5 new categories requires far fewer new examples to work well than learning every feature from scratch on 40 images per class."
+    },
+    {
+      "id": "c",
+      "text": "Use a larger batch size during training",
+      "is_correct": false,
+      "explanation": "Batch size affects the noisiness and speed of gradient updates, not the fundamental problem that there isn't enough labeled data to learn good visual features entirely from scratch."
+    },
+    {
+      "id": "d",
+      "text": "Remove all regularization to let the model fit the data as closely as possible",
+      "is_correct": false,
+      "explanation": "Removing regularization would let the model fit the tiny training set even more closely, which increases overfitting risk rather than addressing the underlying scarcity of labeled data."
+    }
+  ],
+  "correct_option_id": "b",
+  "key_takeaway": "When labeled data is scarce, transfer learning from a model pretrained on a large, related dataset is usually far more effective than training a deep model from scratch, because it reuses already-learned general features instead of requiring the small dataset to teach the network everything.",
+  "common_misconception": "Assuming a deep learning problem always calls for a deep, from-scratch architecture, without considering whether there's enough data to actually learn one.",
+  "experimentation": {
+    "objective": "Approximate the effect of transfer learning versus training from scratch on the same very small labeled set - reusing a feature representation learned from more data should generalize much better than learning directly from 40 raw examples.",
+    "data_generation_code": "import numpy as np\nfrom sklearn.datasets import make_classification\nfrom sklearn.decomposition import PCA\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.model_selection import train_test_split\n\n# Simulate a labeled dataset (only a small slice of it is actually labeled)\nX, y = make_classification(n_samples=400, n_features=200, n_informative=12,\n                            n_redundant=0, n_classes=5, n_clusters_per_class=1,\n                            class_sep=1.5, random_state=2)\nX_train, X_val, y_train, y_val = train_test_split(X, y, train_size=40, random_state=2)\n# only 40 labeled training examples -- deliberately small, like the scenario\n\n# \"from scratch\": train a classifier directly on raw high-dimensional features\nscratch_model = LogisticRegression(max_iter=3000).fit(X_train, y_train)\n\n# \"transfer learning\" stand-in: reduce to a compact feature space fit on the FULL\n# dataset (representing knowledge from a much larger pretraining set), then train\n# only a simple classifier on top of those features using the small labeled set\npretrained_features = PCA(n_components=12, random_state=2).fit(X)  # fit on all data\nX_train_transfer = pretrained_features.transform(X_train)\nX_val_transfer = pretrained_features.transform(X_val)\ntransfer_model = LogisticRegression(max_iter=3000).fit(X_train_transfer, y_train)\n\n# Try it yourself:\n# print(\"from-scratch val accuracy:\", scratch_model.score(X_val, y_val))\n# print(\"transfer-learning-style val accuracy:\", transfer_model.score(X_val_transfer, y_val))\n",
+    "suggested_exploration": "Compare 'from-scratch val accuracy' against 'transfer-learning-style val accuracy' from the code above. Note this uses PCA on the full feature set as a simplified stand-in for a pretrained representation - real transfer learning reuses features learned from a much larger, separate labeled dataset (like ImageNet), but the core idea - reusing an already-learned representation instead of learning one from only 40 examples - is the same."
+  }
+}

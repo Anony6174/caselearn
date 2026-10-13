@@ -1,8 +1,8 @@
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 
 // Deliberately tiny formatter for content text: blank lines separate
-// paragraphs, `code`, **bold** and *italic* inline, ``` fences make code
-// blocks. Nothing is parsed as HTML. Emphasis markers must hug non-space
+// paragraphs, `code`, **bold** and *italic* inline, "- " lines make bullet
+// lists, ``` fences make code blocks. Nothing is parsed as HTML. Emphasis markers must hug non-space
 // text, so prose like `int* p` or `x * y` outside backticks is left alone.
 
 const INLINE = /(`[^`\n]+`|\*\*[^\s*](?:[^*\n]*[^\s*])?\*\*|\*[^\s*](?:[^*\n]*[^\s*])?\*)/g;
@@ -36,11 +36,41 @@ export function RichText({ text, className = "" }: { text: string; className?: s
       .split(/\n\s*\n/)
       .map((p) => p.trim())
       .filter(Boolean)
-      .map((p, j) => (
-        <p key={`p${i}-${j}`} className="whitespace-pre-line">
-          {inline(p)}
-        </p>
-      ));
+      .flatMap((p, j) => paragraph(p, `${i}-${j}`));
   });
   return <div className={`space-y-2 ${className}`}>{blocks}</div>;
+}
+
+// A paragraph may mix text lines and "- " bullet lines; consecutive bullets
+// become one list.
+function paragraph(p: string, key: string): ReactElement[] {
+  const out: ReactElement[] = [];
+  let text: string[] = [];
+  let bullets: string[] = [];
+  const flushText = () => {
+    if (text.length) out.push(<p key={`${key}-t${out.length}`} className="whitespace-pre-line">{inline(text.join("\n"))}</p>);
+    text = [];
+  };
+  const flushBullets = () => {
+    if (bullets.length) {
+      out.push(
+        <ul key={`${key}-l${out.length}`} className="list-disc pl-5 space-y-1 marker:text-[var(--color-text-faint)]">
+          {bullets.map((b, k) => <li key={k}>{inline(b)}</li>)}
+        </ul>,
+      );
+    }
+    bullets = [];
+  };
+  for (const line of p.split("\n")) {
+    if (line.startsWith("- ")) {
+      flushText();
+      bullets.push(line.slice(2));
+    } else {
+      flushBullets();
+      text.push(line);
+    }
+  }
+  flushText();
+  flushBullets();
+  return out;
 }

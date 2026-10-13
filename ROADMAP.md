@@ -203,6 +203,11 @@ before starting the next.
 - Build-time verification: the build script runs every `predict-output` snippet (local `python3` / `g++`) and writes `expected_output`. Answers are never typed by hand, so they can't be wrong.
 - Content: 10 items each for C++, Python, and OS from the critical-questions list above.
 
+**Phase 1.5 — Programming challenges** — ✅ done
+- `code-challenge` items: write code against a test harness; the build proves each harness against a reference solution.
+- Python runs in the browser (Pyodide, light mode); C++ and Bash run through a local runner in the dev server.
+- 30 challenges: 10 Python, 10 C++, 10 Bash (OOP, RAII, patterns, robust scripting).
+
 **Phase 2 — Learning loop**
 - Before lock-in: confidence picker + optional "your reasoning" box; after reveal, show your reasoning next to the explanation.
 - Review queue (Leitner boxes at 1/3/7/16/35 days). A wrong answer resets to box 1; confident-and-wrong is flagged as a misconception.
@@ -221,6 +226,7 @@ before starting the next.
   }
   ```
 - **SQL**: `sql.js` (SQLite in WASM, runs fully in the browser) with seed schemas (employees, orders, …); results shown as a table.
+- **C++ and Bash already run locally** (Phase 1.5). For a deployed site:
 - **C++**: Compiler Explorer (godbolt.org) REST API — `POST /api/compiler/<id>/compile` with `filters.execute = true` returns both program output *and* assembly.
   - Spike first: confirm CORS from the browser works; if not, add a small Vercel/Netlify function as a proxy.
   - Only send requests when Run is clicked (no compiling as you type), cache results by hash of source + flags, and show a notice that the code is sent to godbolt.org.

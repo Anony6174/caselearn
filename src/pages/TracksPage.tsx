@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { TRACKS, TRACK_BLURBS, TRACK_TITLES } from "../content/tracks";
+import { SECTIONS, TRACK_BLURBS, TRACK_TITLES } from "../content/tracks";
 import { useContentIndex } from "../content/useContent";
 import { useProgress } from "../hooks/useProgress";
 import { AppHeader, ProgressLine, Spinner } from "../components/AppHeader";
@@ -15,7 +15,6 @@ export function TracksPage() {
   const { data: index, loading, error } = useContentIndex();
   const { statuses } = useProgress();
   const live = new Set(index?.tracks.map((t) => t.id));
-  const comingSoon = TRACKS.filter((t) => !live.has(t));
 
   return (
     <div className="min-h-screen">
@@ -48,31 +47,46 @@ export function TracksPage() {
 
         {index && (
           <>
-            <h2 className="eyebrow mb-4">Tracks</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {index.tracks.map((t) => {
-                const attempted = t.item_ids.filter((id) => statuses.has(id)).length;
-                const correct = t.item_ids.filter((id) => statuses.get(id) === "correct").length;
+            <div className="space-y-16">
+              {SECTIONS.map((section) => {
+                const tracks = section.tracks.flatMap((id) => index.tracks.filter((t) => t.id === id));
+                const soon = section.tracks.filter((id) => !live.has(id));
+                if (tracks.length === 0) return null;
                 return (
-                  <Link key={t.id} to={`/t/${t.id}`} id={`track-${t.id}`} className="card card-link block p-6 group">
-                    <div className="flex items-baseline justify-between gap-3">
-                      <h3 className="serif text-[1.7rem] leading-tight text-[var(--color-text)]">{t.title}</h3>
-                      <span className="text-xs text-[var(--color-text-faint)] tabular-nums shrink-0">{t.count} items</span>
+                  <section key={section.title} aria-labelledby={`section-${section.title}`}>
+                    <div className="mb-5">
+                      <h2 id={`section-${section.title}`} className="serif text-[2rem] leading-tight text-[var(--color-text)]">
+                        {section.title}
+                      </h2>
+                      <p className="text-sm text-[var(--color-text-muted)] mt-0.5">{section.blurb}</p>
                     </div>
-                    <p className="mt-1.5 mb-6 text-sm text-[var(--color-text-muted)] leading-relaxed">{TRACK_BLURBS[t.id]}</p>
-                    <ProgressLine attempted={attempted} correct={correct} total={t.count} />
-                  </Link>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {tracks.map((t) => {
+                        const attempted = t.item_ids.filter((id) => statuses.has(id)).length;
+                        const correct = t.item_ids.filter((id) => statuses.get(id) === "correct").length;
+                        return (
+                          <Link key={t.id} to={`/t/${t.id}`} id={`track-${t.id}`} className="card card-link flex flex-col p-6">
+                            <div className="flex items-baseline justify-between gap-3">
+                              <h3 className="serif text-[1.6rem] leading-tight text-[var(--color-text)]">{t.title}</h3>
+                              <span className="text-xs text-[var(--color-text-faint)] tabular-nums shrink-0">{t.count} items</span>
+                            </div>
+                            <p className="mt-1.5 mb-6 flex-1 text-sm text-[var(--color-text-muted)] leading-relaxed">{TRACK_BLURBS[t.id]}</p>
+                            <ProgressLine attempted={attempted} correct={correct} total={t.count} />
+                          </Link>
+                        );
+                      })}
+                    </div>
+                    {soon.length > 0 && (
+                      <p className="mt-5 text-sm text-[var(--color-text-faint)] leading-relaxed">
+                        <span className="text-[var(--color-text-muted)]">Coming next</span>
+                        {" · "}
+                        {soon.map((t) => TRACK_TITLES[t]).join(" · ")}
+                      </p>
+                    )}
+                  </section>
                 );
               })}
             </div>
-
-            {comingSoon.length > 0 && (
-              <p className="mt-10 text-sm text-[var(--color-text-faint)] leading-relaxed">
-                <span className="text-[var(--color-text-muted)]">Coming next</span>
-                {" · "}
-                {comingSoon.map((t) => TRACK_TITLES[t]).join(" · ")}
-              </p>
-            )}
 
             <footer className="mt-20 mb-10 pt-6 border-t border-[var(--color-border)]">
               <ProgressBackup />

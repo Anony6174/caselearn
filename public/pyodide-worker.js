@@ -2,6 +2,9 @@
 importScripts("https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js");
 
 let pyodide = null;
+// ?light=1: plain Python only (code challenges), skipping the scientific
+// packages, which take most of the start-up time.
+const LIGHT = new URLSearchParams(self.location.search).get("light") === "1";
 
 /* ── bootstrap ──────────────────────────────────────────────────── */
 async function initPyodide() {
@@ -16,16 +19,18 @@ async function initPyodide() {
     pyodide.setStdout({ batched: (t) => post("stdout", t) });
     pyodide.setStderr({ batched: (t) => post("stderr", t) });
 
-    post("loading", "Loading numpy, pandas, scipy, scikit-learn, matplotlib…");
-    await pyodide.loadPackage(["numpy", "pandas", "scipy", "scikit-learn", "matplotlib"]);
+    if (!LIGHT) {
+      post("loading", "Loading numpy, pandas, scipy, scikit-learn, matplotlib…");
+      await pyodide.loadPackage(["numpy", "pandas", "scipy", "scikit-learn", "matplotlib"]);
 
-    // Pre-configure matplotlib Agg backend so figures can be captured
-    pyodide.runPython(`
+      // Pre-configure matplotlib Agg backend so figures can be captured
+      pyodide.runPython(`
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import io, base64, sys
 `);
+    }
 
     self.postMessage({ type: "ready" });
   } catch (err) {
@@ -34,8 +39,20 @@ import io, base64, sys
 }
 
 /* ── run user code ──────────────────────────────────────────────── */
-async function runCode(code) {
+async function runCode(code, fresh) {
   try {
+    if (fresh) {
+      // A whole program (e.g. solution + test harness) in a brand-new
+      // namespace, so nothing leaks between runs.
+      pyodide.globals.set("__caselearn_src", code);
+      await pyodide.runPythonAsync(`
+from pyodide.code import eval_code_async as __caselearn_eval
+await __caselearn_eval(__caselearn_src, {"__name__": "__main__"}, return_mode="none")
+`);
+      self.postMessage({ type: "done" });
+      return;
+    }
+
     // Like a notebook cell: if the code ends in a bare expression (e.g.
     // `spearmanr(x, y)`), print its repr, so the result is visible without print().
     pyodide.globals.set("__caselearn_src", code);
@@ -75,9 +92,9 @@ _out
 
 /* ── message handler ────────────────────────────────────────────── */
 self.onmessage = async (e) => {
-  const { type, code } = e.data;
+  const { type, code, fresh } = e.data;
   if (type === "run") {
-    await runCode(code);
+    await runCode(code, Boolean(fresh));
   }
   // "init" is handled automatically on worker creation
 };

@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import type { Item } from "../content/schema";
 import { asTrack, TRACK_TITLES } from "../content/tracks";
@@ -11,6 +12,8 @@ import type { RecordAttempt } from "../components/items/types";
 import { CaseMcqView } from "../components/items/CaseMcqView";
 import { PredictOutputView } from "../components/items/PredictOutputView";
 import { ConceptView } from "../components/items/ConceptView";
+import { CodeChallengeView } from "../components/items/CodeChallengeView";
+import { CodePanelContext, loadExpanded, saveExpanded } from "../components/items/codePanel";
 
 function ItemView({ item, onAttempt }: { item: Item; onAttempt: RecordAttempt }) {
   switch (item.type) {
@@ -20,6 +23,8 @@ function ItemView({ item, onAttempt }: { item: Item; onAttempt: RecordAttempt })
       return <PredictOutputView item={item} onAttempt={onAttempt} />;
     case "concept":
       return <ConceptView item={item} onAttempt={onAttempt} />;
+    case "code-challenge":
+      return <CodeChallengeView item={item} onAttempt={onAttempt} />;
   }
 }
 
@@ -28,6 +33,18 @@ export function ItemPage() {
   const track = asTrack(params.track);
   const { data, loading, error } = useTrack(track);
   const { statusOf, recordAttempt } = useProgress();
+  const [expanded, setExpanded] = useState(loadExpanded);
+  const codePanel = useMemo(
+    () => ({
+      expanded,
+      toggle: () =>
+        setExpanded((e) => {
+          saveExpanded(!e);
+          return !e;
+        }),
+    }),
+    [expanded],
+  );
 
   if (!track) return <Navigate to="/" replace />;
   const back = { to: `/t/${track}`, label: TRACK_TITLES[track] };
@@ -60,11 +77,12 @@ export function ItemPage() {
   const prev = items[idx - 1];
   const next = items[idx + 1];
   const status = statusOf(item.id);
-  const column = hasCodePanel(item) ? "max-w-6xl" : "max-w-2xl";
+  const wide = hasCodePanel(item) && expanded;
+  const column = hasCodePanel(item) ? (wide ? "max-w-[96rem]" : "max-w-6xl") : "max-w-2xl";
 
   return (
     <div className="min-h-screen">
-      <AppHeader back={back}>
+      <AppHeader back={back} wide={wide}>
         {status !== "unseen" && (
           <span className="hidden sm:flex items-center gap-1.5">
             <StatusDot status={status} /> {STATUS_LABEL[status]}
@@ -75,7 +93,7 @@ export function ItemPage() {
         </span>
       </AppHeader>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 pb-16">
+      <main className={`${wide ? "max-w-[96rem]" : "max-w-6xl"} mx-auto px-4 sm:px-6 pb-16`}>
         <div className={`${column} mx-auto pt-10 sm:pt-14 mb-8`}>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--color-text-muted)]">
             <span className="eyebrow !text-[var(--color-accent)]">{itemTypeLabel(item)}</span>
@@ -94,7 +112,9 @@ export function ItemPage() {
         </div>
 
         {/* key: a fresh view (and fresh answer state) for each item */}
-        <ItemView key={item.id} item={item} onAttempt={recordAttempt} />
+        <CodePanelContext.Provider value={codePanel}>
+          <ItemView key={item.id} item={item} onAttempt={recordAttempt} />
+        </CodePanelContext.Provider>
 
         <nav className={`${column} mx-auto mt-16 pt-6 border-t border-[var(--color-border)] grid grid-cols-2 gap-4`}>
           {prev ? (

@@ -10,7 +10,10 @@ const chrome = EditorView.theme({
     fontSize: "13px",
     color: "var(--color-text)",
     backgroundColor: "var(--color-code-bg)",
-    height: "100%",
+    // Fill the (flex) container, so a taller panel means more editing room,
+    // and scroll inside it.
+    flex: "1 1 auto",
+    minHeight: "0",
   },
   "&.cm-focused": { outline: "none" },
   ".cm-scroller": { overflow: "auto", fontFamily: "var(--font-mono)", lineHeight: "1.65" },

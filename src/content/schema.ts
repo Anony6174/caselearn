@@ -83,11 +83,29 @@ export const ConceptItemSchema = BaseItemSchema.extend({
   follow_ups: z.array(z.string().min(1)).default([]),
 });
 
-// Phase 3 adds code-challenge to this union.
+export const ChallengeLanguageSchema = z.enum(["python", "cpp", "bash"]);
+
+// Write code that passes a test harness. The harness protocol and helpers are
+// in src/runners/ (challenge.ts, preludes/). The build runs the harness against
+// `reference_solution` (every test must pass) and `starter_code` (at least one
+// must fail), and records the test names.
+export const CodeChallengeItemSchema = BaseItemSchema.extend({
+  type: z.literal("code-challenge"),
+  language: ChallengeLanguageSchema,
+  statement: z.string().min(1),
+  starter_code: z.string().min(1),
+  harness: z.string().min(1),
+  reference_solution: z.string().min(1),
+  hints: z.array(z.string().min(1)).min(1).max(4),
+  discussion: z.string().min(1), // shown once solved or given up: key ideas, pitfalls
+  test_names: z.array(z.string()).optional(), // set by the build; must not be in source files
+});
+
 export const ItemSchema = z.discriminatedUnion("type", [
   CaseMcqItemSchema,
   PredictOutputItemSchema,
   ConceptItemSchema,
+  CodeChallengeItemSchema,
 ]);
 
 export type Track = z.infer<typeof TrackSchema>;
@@ -96,6 +114,7 @@ export type SnippetLanguage = z.infer<typeof SnippetLanguageSchema>;
 export type CaseMcqItem = z.infer<typeof CaseMcqItemSchema>;
 export type PredictOutputItem = z.infer<typeof PredictOutputItemSchema>;
 export type ConceptItem = z.infer<typeof ConceptItemSchema>;
+export type CodeChallengeItem = z.infer<typeof CodeChallengeItemSchema>;
 export type Item = z.infer<typeof ItemSchema>;
 export type ItemType = Item["type"];
 

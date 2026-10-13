@@ -26,4 +26,13 @@ describe("RichText", () => {
     expect(out.match(/<p /g)).toHaveLength(2);
     expect(out).toContain("<pre");
   });
+
+  it("turns consecutive '- ' lines into a list", () => {
+    const out = html("Intro:\n- one\n- `two`\nAfter.");
+    expect(out).toMatch(/<p[^>]*>Intro:<\/p><ul[^>]*><li>one<\/li><li><code[^>]*>two<\/code><\/li><\/ul><p[^>]*>After\.<\/p>/);
+  });
+
+  it("leaves a dash inside a sentence alone", () => {
+    expect(html("x - y")).not.toContain("<li>");
+  });
 });

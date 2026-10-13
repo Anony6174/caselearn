@@ -5,12 +5,14 @@ import { ThemeToggle } from "./ThemeToggle";
 interface Props {
   back?: { to: string; label: string };
   children?: ReactNode; // right-aligned extras
+  /** Match a page that uses the expanded (wider) layout. */
+  wide?: boolean;
 }
 
-export function AppHeader({ back, children }: Props) {
+export function AppHeader({ back, children, wide = false }: Props) {
   return (
     <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-bg)_82%,transparent)] backdrop-blur-md">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
+      <div className={`${wide ? "max-w-[96rem]" : "max-w-6xl"} mx-auto px-4 sm:px-6 h-14 flex items-center gap-3`}>
         <Link to="/" className="serif text-[1.35rem] leading-none text-[var(--color-text)] shrink-0">
           caselearn
         </Link>

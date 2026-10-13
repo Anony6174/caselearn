@@ -1,0 +1,25 @@
+{
+  "id": "bashp-toplog-001",
+  "type": "code-challenge",
+  "track": "bash",
+  "verified": false,
+  "title": "Top Talkers in an Access Log",
+  "topics": [
+    "pipelines",
+    "getopts",
+    "awk"
+  ],
+  "difficulty": "intermediate",
+  "statement": "Write `top_ips.sh [-n N] [-s STATUS]`. It reads a web server access log on **stdin** and prints the IP addresses that made the most requests.\n\nEach line looks like:\n```\n203.0.113.5 - - [10/Oct/2026:13:55:36 +0000] \"GET /index.html HTTP/1.1\" 200 2326\n```\n(the IP is the 1st field, the HTTP status the 9th).\n\n- Print `COUNT IP` lines: the top `N` (default 3), most requests first, ties by IP.\n- `-s STATUS` counts only requests with that status (e.g. `-s 404`).\n- `-n` must be a positive integer; otherwise, or for an unknown option, print a message to stderr and exit 2.\n- Empty input prints nothing and exits 0.",
+  "starter_code": "#!/usr/bin/env bash\n# top_ips.sh [-n N] [-s STATUS] < access.log\ncut -d' ' -f1 | sort | uniq -c | sort -r | head -3\n",
+  "harness": "log() { printf '%s - - [10/Oct/2026:13:55:36 +0000] \"GET %s HTTP/1.1\" %s 512\\n' \"$1\" \"${3:-/}\" \"$2\"; }\nsample() {\n  log 10.0.0.1 200; log 10.0.0.2 200; log 10.0.0.1 404; log 10.0.0.3 200\n  log 10.0.0.1 200; log 10.0.0.2 404; log 10.0.0.4 500; log 10.0.0.2 200\n  log 10.0.0.10 200; log 10.0.0.10 404\n}\n(\n  cd \"$(fresh_dir)\"; sample > access.log\n  run_solution < access.log\n  expect_eq \"top 3 by default, ties by IP\" $'3 10.0.0.1\\n3 10.0.0.2\\n2 10.0.0.10' \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"; sample > access.log\n  run_solution -n 1 < access.log\n  expect_eq \"-n limits the output\" \"3 10.0.0.1\" \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"; sample > access.log\n  run_solution -s 404 < access.log\n  expect_eq \"-s filters by status\" $'1 10.0.0.1\\n1 10.0.0.10\\n1 10.0.0.2' \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"; sample > access.log\n  run_solution -n 10 -s 500 < access.log\n  expect_eq \"fewer results than N\" \"1 10.0.0.4\" \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"\n  run_solution < /dev/null\n  if [[ $status == 0 && -z $out ]]; then pass \"empty input: no output, exit 0\"\n  else fail \"empty input: no output, exit 0\" \"status=$status stdout=[$out]\"; fi\n)\n(\n  cd \"$(fresh_dir)\"\n  ok=1\n  for bad in 0 -3 abc 2x; do\n    run_solution -n \"$bad\" < /dev/null\n    [[ $status == 2 && -n $err ]] || { ok=0; detail=\"-n $bad gave status=$status stderr=[$err]\"; }\n  done\n  run_solution -x < /dev/null\n  [[ $status == 2 ]] || { ok=0; detail=\"-x gave status=$status\"; }\n  if (( ok )); then pass \"bad -n values and unknown options exit 2\"; else fail \"bad -n values and unknown options exit 2\" \"$detail\"; fi\n)\n",
+  "reference_solution": "#!/usr/bin/env bash\n# top_ips.sh [-n N] [-s STATUS] < access.log\nusage() {\n  echo \"usage: top_ips.sh [-n N] [-s STATUS] < access.log\" >&2\n  exit 2\n}\n\nn=3\nstatus=\"\"\nwhile getopts \":n:s:\" opt; do   # leading ':' = we handle errors ourselves\n  case $opt in\n    n) n=$OPTARG ;;\n    s) status=$OPTARG ;;\n    *) usage ;;\n  esac\ndone\n\nif ! [[ $n =~ ^[1-9][0-9]*$ ]]; then\n  echo \"top_ips.sh: -n must be a positive integer\" >&2\n  exit 2\nfi\n\nawk -v want=\"$status\" 'NF >= 9 && (want == \"\" || $9 == want) { print $1 }' |\n  sort | uniq -c |\n  awk '{ print $1, $2 }' |      # normalise uniq's padded output to \"COUNT IP\"\n  sort -k1,1nr -k2,2 |          # count descending (numeric), then IP\n  head -n \"$n\"\n",
+  "hints": [
+    "`while getopts \":n:s:\" opt; do case $opt in ...; esac; done` parses the options; `$OPTARG` holds each option's value.",
+    "Validate `-n` with a regex: `[[ $n =~ ^[1-9][0-9]*$ ]]`.",
+    "`sort -r` sorts *text*, so `10` comes before `9`. Use `sort -k1,1nr -k2,2`: numeric reverse on the count, then the IP as a tie-breaker.",
+    "`awk -v want=\"$status\" '$9 == want'` filters by a field; pass shell values in with `-v` rather than splicing them into the program text."
+  ],
+  "discussion": "This is the bread and butter of on-call work: `sort | uniq -c | sort -nr | head` answers \"who is hammering us?\" in seconds.\n\nWhere the quick version goes wrong:\n- **`sort -r` is a text sort.** \"10\" sorts before \"9\", and the starter happily reports the wrong top talker. `-n` makes it numeric; `-k1,1nr -k2,2` adds a deterministic tie-break, which matters for reproducible output (and for tests).\n- **`cut -d' '` is fragile** with variable spacing; `awk` splits on runs of whitespace.\n- **`getopts`** handles `-n 5`, `-n5` and grouped flags correctly, and the leading `:` in the option string lets you print your own message and choose the exit code.\n- **Validate numeric arguments.** `head -n abc` fails with a confusing error, and `head -n 0` silently prints nothing.\n- **Never splice user input into an `awk` program** (`awk \"\\$9 == $status\"`). That's code injection. Pass it with `-v`.\n\n**Follow-ups:** How would you handle a 50 GB log faster? (One `awk` pass with an associative array instead of sorting everything.) How would you do this for a live log? (`tail -F` plus a periodic summary.)",
+  "language": "bash"
+}

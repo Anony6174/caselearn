@@ -1,0 +1,25 @@
+{
+  "id": "bashp-greet-001",
+  "type": "code-challenge",
+  "track": "bash",
+  "verified": false,
+  "title": "Arguments, Defaults and Exit Codes",
+  "topics": [
+    "arguments",
+    "exit-codes",
+    "quoting"
+  ],
+  "difficulty": "beginner",
+  "statement": "Write `greet.sh [NAME]`, a small script that behaves like a well-mannered Unix tool.\n\n- No argument: print `Hello, World!`\n- One argument: print `Hello, NAME!`. The name is printed **exactly** as given, even if it contains spaces or characters like `*`.\n- `-h` or `--help`: print `usage: greet.sh [NAME]` to stdout and exit 0.\n- More than one argument: print that usage line to **stderr**, print nothing to stdout, and exit with status **2**.",
+  "starter_code": "#!/usr/bin/env bash\n# greet.sh [NAME]\necho Hello, $1!\n",
+  "harness": "(\n  cd \"$(fresh_dir)\"\n  run_solution\n  expect_eq \"greets the World by default\" \"Hello, World!\" \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"\n  run_solution Ada\n  expect_eq \"greets by name\" \"Hello, Ada!\" \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"\n  run_solution \"Ada  Lovelace\"\n  expect_eq \"keeps spaces in the name exactly\" \"Hello, Ada  Lovelace!\" \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"\n  touch a.txt b.txt   # an unquoted * would expand to these\n  run_solution \"*\"\n  expect_eq \"doesn't glob-expand the name\" \"Hello, *!\" \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"\n  run_solution --help\n  if [[ $status == 0 && $out == \"usage: greet.sh [NAME]\" ]]; then pass \"--help prints usage and exits 0\"\n  else fail \"--help prints usage and exits 0\" \"status=$status stdout=[$out]\"; fi\n)\n(\n  cd \"$(fresh_dir)\"\n  run_solution one two\n  if [[ $status == 2 && -z $out && $err == *\"usage: greet.sh [NAME]\"* ]]; then pass \"too many arguments: usage on stderr, exit 2\"\n  else fail \"too many arguments: usage on stderr, exit 2\" \"status=$status stdout=[$out] stderr=[$err]\"; fi\n)\n",
+  "reference_solution": "#!/usr/bin/env bash\n# greet.sh [NAME]\nusage=\"usage: greet.sh [NAME]\"\n\nif (( $# > 1 )); then\n  echo \"$usage\" >&2   # errors and usage-on-misuse go to stderr\n  exit 2              # 2 is the conventional \"bad usage\" status\nfi\n\ncase ${1-} in\n  -h|--help)\n    echo \"$usage\"\n    exit 0\n    ;;\nesac\n\nname=${1:-World}            # default when $1 is unset or empty\nprintf 'Hello, %s!\\n' \"$name\"  # quoted: no word splitting, no globbing\n",
+  "hints": [
+    "`$#` is the number of arguments. Check it first, before doing anything else.",
+    "`${1:-World}` gives `$1`, or `World` if it's unset or empty.",
+    "An unquoted `$1` is split on spaces and glob-expanded (`*` becomes the file names in the directory). Always write `\"$1\"`.",
+    "`echo \"...\" >&2` writes to stderr."
+  ],
+  "discussion": "Tiny script, three habits that separate solid shell code from fragile shell code:\n\n- **Quote every expansion.** Unquoted `$1` undergoes *word splitting* (collapsing the two spaces in `\"Ada  Lovelace\"`) and *pathname expansion* (`*` turns into a file list). `\"$1\"` is almost always what you mean. ShellCheck will flag these for you.\n- **Streams have jobs.** stdout is for the program's *output* (what gets piped onward); stderr is for diagnostics. If usage errors went to stdout, `greet.sh a b | other_tool` would feed the error message to `other_tool`.\n- **Exit codes are the API.** `0` means success; non-zero means failure, and callers (`&&`, `if`, CI pipelines, `set -e`) depend on it. `2` for misuse is a widespread convention (e.g. `grep` and `ls` use it).\n\n`printf '%s'` is safer than `echo` for arbitrary data. `echo` may interpret a name like `-n` or backslash escapes, depending on the shell.\n\n**Follow-ups:** What's the difference between `$*`, `$@` and `\"$@\"`? What does `${1?message}` do?",
+  "language": "bash"
+}

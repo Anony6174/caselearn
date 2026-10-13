@@ -1,0 +1,24 @@
+{
+  "id": "pyp-iter-001",
+  "type": "code-challenge",
+  "track": "python-prog",
+  "verified": false,
+  "title": "Iterables, Iterators and Laziness",
+  "topics": [
+    "iterators",
+    "generators",
+    "laziness"
+  ],
+  "difficulty": "intermediate",
+  "statement": "**1. `Countdown(n)`** is an *iterable* that yields `n, n-1, …, 1`.\n- It can be looped over **any number of times**, and two loops over the same `Countdown` don't interfere (`zip(c, c)` pairs each number with itself).\n\n**2. `chunked(iterable, n)`** returns an iterator of lists of `n` items; the last list may be shorter.\n- It must be **lazy**: it works on infinite iterables and only pulls what it needs.\n- `chunked(x, 0)` must raise `ValueError` **immediately when called**, not later when you first iterate.\n\n```\nlist(chunked(\"abcde\", 2))   # [['a', 'b'], ['c', 'd'], ['e']]\n```",
+  "starter_code": "class Countdown:\n    def __init__(self, start):\n        self.current = start\n\n    def __iter__(self):\n        return self\n\n    def __next__(self):\n        if self.current <= 0:\n            raise StopIteration\n        self.current -= 1\n        return self.current + 1\n\n\ndef chunked(iterable, n):\n    # TODO: yield lists of n items\n    raise NotImplementedError\n",
+  "harness": "import itertools\n\n@test(\"Countdown yields n down to 1\")\ndef _():\n    assert list(Countdown(3)) == [3, 2, 1]\n    assert list(Countdown(0)) == []\n\n@test(\"Countdown can be iterated more than once\")\ndef _():\n    c = Countdown(3)\n    first, second = list(c), list(c)\n    assert second == [3, 2, 1], f\"second pass gave {second}\"\n\n@test(\"two loops over one Countdown are independent\")\ndef _():\n    c = Countdown(3)\n    pairs = list(zip(c, c))\n    assert pairs == [(3, 3), (2, 2), (1, 1)], f\"zip(c, c) gave {pairs}\"\n\n@test(\"chunked splits into lists of n\")\ndef _():\n    assert list(chunked([1, 2, 3, 4, 5, 6], 2)) == [[1, 2], [3, 4], [5, 6]]\n\n@test(\"the last chunk may be shorter\")\ndef _():\n    assert list(chunked(\"abcde\", 2)) == [[\"a\", \"b\"], [\"c\", \"d\"], [\"e\"]]\n    assert list(chunked([], 3)) == []\n\n@test(\"chunked is lazy (works on an infinite iterator)\")\ndef _():\n    chunks = chunked(itertools.count(), 3)\n    assert next(chunks) == [0, 1, 2]\n    assert next(chunks) == [3, 4, 5]\n\n@test(\"chunked(x, 0) raises ValueError immediately\")\ndef _():\n    raises(ValueError, chunked, [1, 2, 3], 0)\n",
+  "reference_solution": "class Countdown:\n    def __init__(self, start):\n        self.start = start\n\n    def __iter__(self):\n        # A generator method: every call to iter() starts a fresh, independent iterator.\n        n = self.start\n        while n > 0:\n            yield n\n            n -= 1\n\n\ndef chunked(iterable, n):\n    # Validate eagerly: a generator function's body doesn't run until the first next().\n    if n < 1:\n        raise ValueError(\"n must be at least 1\")\n    return _chunks(iter(iterable), n)\n\n\ndef _chunks(it, n):\n    chunk = []\n    for item in it:\n        chunk.append(item)\n        if len(chunk) == n:\n            yield chunk\n            chunk = []\n    if chunk:\n        yield chunk\n",
+  "hints": [
+    "An *iterator* is consumed as you go; an *iterable* hands out a fresh iterator from `__iter__` each time. The starter's `Countdown` is its own iterator, so it can only be used once.",
+    "Make `__iter__` a generator method (use `yield` inside it). Each call creates a new generator with its own state.",
+    "A generator function's body doesn't run until the first `next()`, so a `raise` inside it is delayed. Validate in a normal function that *returns* the generator."
+  ],
+  "discussion": "Two ideas that trip people up in interviews and in real code:\n\n**Iterable vs iterator.** `list`, `dict` and `range` are *iterables*: `iter(x)` gives a new iterator each time, so you can loop over them again and again. Files, generators, `map` and `zip` are *iterators*: they're used up. A class whose `__iter__` returns `self` is an iterator, so its second loop is silently empty, and `zip(c, c)` pulls alternately from the *same* stream (giving `[(3, 2)]`). That's the starter's bug.\n\n**Generators are lazy.** Nothing in a generator function runs until the first `next()`. That's what makes `chunked(itertools.count(), 3)` possible. It also means errors are deferred: `g = chunked(x, 0)` would \"succeed\", and the `ValueError` would appear later, far from the bad call. Splitting into an eager validating wrapper plus a lazy inner generator gives you both.\n\nPython 3.12 ships `itertools.batched` (it yields tuples); writing it yourself is a common interview task.\n\n**Follow-ups:** What does `yield from` do? How would you make `chunked` yield tuples without building lists? What's the memory cost of `list(chunked(...))` vs looping?",
+  "language": "python"
+}

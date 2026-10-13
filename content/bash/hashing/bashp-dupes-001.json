@@ -1,0 +1,25 @@
+{
+  "id": "bashp-dupes-001",
+  "type": "code-challenge",
+  "track": "bash",
+  "verified": false,
+  "title": "Find Duplicate Files",
+  "topics": [
+    "hashing",
+    "find",
+    "associative-arrays"
+  ],
+  "difficulty": "advanced",
+  "statement": "Write `dupes.sh DIR`: find the regular files under `DIR` (recursively) that have **identical content**.\n\n- Print one line per group of 2 or more identical files: their paths **relative to `DIR`**, sorted, joined with ` | `.\n- Sort the groups by their first path.\n- Files with the same name but different content are not duplicates. Empty files are duplicates of each other.\n- Paths may contain spaces (you can assume no newlines in names).\n- No `DIR` argument: print an error and exit non-zero. No duplicates: print nothing.\n\n```\n$ dupes.sh photos\na.jpg | backup/a copy.jpg\nnotes.txt | old/notes.txt | old/notes2.txt\n```",
+  "starter_code": "#!/usr/bin/env bash\n# dupes.sh DIR\nfor f in $(find $1 -type f); do\n  md5sum $f\ndone | sort | uniq -w32 -d\n",
+  "harness": "(\n  cd \"$(fresh_dir)\"; mkdir d; echo a > d/x; echo b > d/y\n  run_solution d\n  if [[ $status == 0 && -z $out ]]; then pass \"no duplicates: no output\"\n  else fail \"no duplicates: no output\" \"status=$status stdout=[$out]\"; fi\n)\n(\n  cd \"$(fresh_dir)\"; mkdir d; echo same > d/a.txt; echo same > d/b.txt; echo other > d/c.txt\n  run_solution d\n  expect_eq \"one pair\" \"a.txt | b.txt\" \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"; mkdir -p d/old; echo n > d/notes.txt; echo n > d/old/notes.txt; echo n > d/old/notes2.txt\n  run_solution d\n  expect_eq \"a group of three across directories\" \"notes.txt | old/notes.txt | old/notes2.txt\" \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"; mkdir d; echo 1 > d/z1; echo 1 > d/a1; echo 2 > d/m2; echo 2 > d/b2\n  run_solution d\n  expect_eq \"several groups, sorted by first path\" $'a1 | z1\\nb2 | m2' \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"; mkdir -p \"d/my photos\"; echo pic > \"d/my photos/a copy.jpg\"; echo pic > d/a.jpg\n  run_solution d\n  expect_eq \"paths with spaces\" \"a.jpg | my photos/a copy.jpg\" \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"; mkdir -p d/x d/y; echo 1 > d/x/same-name; echo 2 > d/y/same-name; : > d/e1; : > d/e2\n  run_solution d\n  expect_eq \"same name isn't enough; empty files are duplicates\" \"e1 | e2\" \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"\n  run_solution\n  if [[ $status != 0 ]]; then pass \"no argument is an error\"; else fail \"no argument is an error\" \"exited 0\"; fi\n)\n",
+  "reference_solution": "#!/usr/bin/env bash\n# dupes.sh DIR\ndir=${1:?usage: dupes.sh DIR}\ncd -- \"$dir\" || exit 1      # work relative to DIR, so printed paths are relative\n\ndeclare -A groups=()        # content hash -> newline-separated paths\nwhile IFS= read -r -d '' path; do\n  hash=$(sha256sum < \"$path\")\n  hash=${hash%% *}\n  path=${path#./}\n  groups[$hash]+=\"$path\"$'\\n'\ndone < <(find . -type f -print0)\n\nfor hash in \"${!groups[@]}\"; do\n  mapfile -t files < <(printf '%s' \"${groups[$hash]}\" | sort)\n  (( ${#files[@]} > 1 )) || continue\n  line=${files[0]}\n  for f in \"${files[@]:1}\"; do line+=\" | $f\"; done\n  printf '%s\\n' \"$line\"\ndone | sort\n",
+  "hints": [
+    "Group by a content hash: `sha256sum < \"$path\"` prints the hash (then `-`). Keep everything before the first space.",
+    "Use an associative array from hash to a newline-separated list of paths, and append with `groups[$hash]+=\"$path\"$'\\n'`.",
+    "`cd` into the directory and run `find . -type f -print0`, then strip the leading `./` to get relative paths.",
+    "`mapfile -t files < <(... | sort)` turns a sorted list back into an array."
+  ],
+  "discussion": "**Grouping by a hash of the content** turns an O(n²) \"compare every pair\" problem into O(n) hashing plus a lookup. It's the same idea behind deduplicating backups, git's object store and content-addressed caches.\n\n- **Same name ≠ same content, and different names can be identical.** Only content matters, which is why the key is a hash.\n- **Collisions:** with SHA-256, an accidental collision is not a practical concern. (MD5 is fine for accidental duplicates, but don't use it where an attacker could craft collisions.) A belt-and-braces tool confirms with a byte-by-byte `cmp` before deleting anything.\n- **Performance:** hashing every byte of every file is the expensive part. Real tools (`fdupes`, `rdfind`, `jdupes`) first group by **file size**, since files of different sizes can't be equal, then hash only the candidates, often hashing just the first few KB first.\n- **Robust traversal again:** `find -print0` + `read -d ''`. The starter's `$(find ...)` breaks on `my photos`.\n- **Deterministic output** (sorted within groups and between groups) makes the tool scriptable and testable.\n\n**Follow-ups:** How would you add a `--size-first` optimisation? What should a \"delete the duplicates\" option keep, and how would you make it safe? (Hard links? A dry run?)",
+  "language": "bash"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "bashp-ext-001",
+  "type": "code-challenge",
+  "track": "bash",
+  "verified": false,
+  "title": "Count Files by Extension",
+  "topics": [
+    "find",
+    "associative-arrays",
+    "parameter-expansion"
+  ],
+  "difficulty": "intermediate",
+  "statement": "Write `by_ext.sh DIR`: count the regular files under `DIR` (recursively, including hidden directories) by extension.\n\n- The extension is the text after the **last** dot of the file name, lowercased: `archive.tar.gz` → `gz`, `Photo.JPG` → `jpg`.\n- No extension → `(none)`. That includes names like `README` and `x.`, and dotfiles like `.bashrc` (a leading dot doesn't start an extension).\n- Print `COUNT EXT` lines, sorted by count (highest first), ties by extension.\n- File names may contain spaces and characters like `*`.\n- With no `DIR` argument, print an error and exit non-zero.",
+  "starter_code": "#!/usr/bin/env bash\n# by_ext.sh DIR\nfor f in $(find $1 -type f); do\n  echo \"${f##*.}\"\ndone | sort | uniq -c\n",
+  "harness": "(\n  cd \"$(fresh_dir)\"\n  mkdir d; touch d/a.txt d/b.txt d/c.md\n  run_solution d\n  expect_eq \"counts by extension, most common first\" $'2 txt\\n1 md' \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"\n  mkdir d; touch d/x.py d/y.c d/z.py d/w.c\n  run_solution d\n  expect_eq \"ties are sorted by extension\" $'2 c\\n2 py' \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"\n  mkdir d; touch d/a.JPG d/b.jpg d/c.Jpg\n  run_solution d\n  expect_eq \"extensions are case-insensitive\" \"3 jpg\" \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"\n  mkdir d; touch d/README d/.bashrc d/x. d/archive.tar.gz\n  run_solution d\n  expect_eq \"no extension, dotfiles and multiple dots\" $'3 (none)\\n1 gz' \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"\n  mkdir -p d/sub/deeper d/.hidden; touch d/sub/a.txt d/sub/deeper/b.txt d/.hidden/c.txt\n  run_solution d\n  expect_eq \"recurses into subdirectories, including hidden ones\" \"3 txt\" \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"\n  mkdir d; touch \"d/my file.txt\" \"d/*.txt\" \"d/two  spaces.log\"\n  run_solution d\n  expect_eq \"file names with spaces and *\" $'2 txt\\n1 log' \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"\n  run_solution\n  if [[ $status != 0 ]]; then pass \"no argument is an error\"; else fail \"no argument is an error\" \"exited 0\"; fi\n)\n",
+  "reference_solution": "#!/usr/bin/env bash\n# by_ext.sh DIR\ndir=${1:?usage: by_ext.sh DIR}   # ${var:?msg}: print msg and exit if unset/empty\n\ndeclare -A counts=()\n# -print0 / read -d '': NUL-separated names, the only separator a file name can't contain.\nwhile IFS= read -r -d '' path; do\n  name=${path##*/}        # basename, without spawning a process\n  base=${name#.}          # drop one leading dot: .bashrc is not an \"extension\"\n  ext=\"(none)\"\n  if [[ $base == *.* && -n ${base##*.} ]]; then\n    ext=${base##*.}       # text after the last dot\n    ext=${ext,,}          # lowercase (bash 4+)\n  fi\n  counts[$ext]=$(( ${counts[$ext]:-0} + 1 ))\ndone < <(find \"$dir\" -type f -print0)\n\nfor ext in \"${!counts[@]}\"; do\n  printf '%s %s\\n' \"${counts[$ext]}\" \"$ext\"\ndone | sort -k1,1nr -k2,2\n",
+  "hints": [
+    "`for f in $(find ...)` splits on spaces and expands globs. Use `find \"$dir\" -type f -print0 | while IFS= read -r -d '' path; do ... done` instead (or `< <(find ...)` to stay in the same shell).",
+    "Parameter expansion does the string work: `${path##*/}` is the base name, `${name##*.}` is the text after the last dot, `${ext,,}` lowercases.",
+    "`declare -A counts` is an associative array. `sort -k1,1nr -k2,2` sorts by count descending, then by extension."
+  ],
+  "discussion": "**`for f in $(find ...)` is the most common bug in shell scripts.** The output is split on whitespace and then glob-expanded, so `my file.txt` becomes two \"files\", and a file literally named `*.txt` expands to every txt file. The robust idiom is NUL-delimited: `find -print0` with `read -r -d ''`. NUL is the one byte a path can't contain.\n\nOther techniques here:\n- **Parameter expansion** (`${x##*/}`, `${x##*.}`, `${x,,}`, `${x:?msg}`) does string manipulation inside bash, without spawning `basename`, `tr` or `sed` for every file. That matters when there are thousands of files.\n- **`< <(cmd)`** (process substitution) feeds the loop without a pipe. With `cmd | while ...`, the loop runs in a subshell, so the `counts` array would be empty afterwards. That's another classic trap.\n- **Associative arrays** (bash 4+; macOS ships bash 3.2, so install a newer one) replace `sort | uniq -c` while letting you normalise keys first.\n- Defining the edge cases (dotfiles, `x.`, `tar.gz`) *before* coding is half the job.\n\n**Follow-ups:** Why does the runner set `LC_ALL=C` for sorting? How would you do the same in one `find ... -printf` + `awk` pipeline?",
+  "language": "bash"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "bashp-count-001",
+  "type": "code-challenge",
+  "track": "bash",
+  "verified": false,
+  "title": "Count Lines and Words, Carefully",
+  "topics": [
+    "loops",
+    "files",
+    "error-handling"
+  ],
+  "difficulty": "beginner",
+  "statement": "Write `count.sh FILE...` that prints `LINES WORDS NAME` for each file, in the order given.\n\n- A last line **without a trailing newline still counts** as a line. (`wc -l` counts newline characters, so it gets this wrong.)\n- File names may contain spaces.\n- A missing file prints `count.sh: NAME: no such file` to stderr. Keep going with the other files, and exit 1 at the end if any file was missing (0 otherwise).\n- No arguments: print `usage: count.sh FILE...` to stderr and exit 2.",
+  "starter_code": "#!/usr/bin/env bash\n# count.sh FILE...\nfor f in $@; do\n  echo \"$(wc -l < $f) $(wc -w < $f) $f\"\ndone\n",
+  "harness": "(\n  cd \"$(fresh_dir)\"\n  printf 'one two\\nthree\\n' > a.txt\n  run_solution a.txt\n  expect_eq \"counts lines and words\" \"2 3 a.txt\" \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"\n  printf 'a b\\nc' > partial.txt\n  run_solution partial.txt\n  expect_eq \"a last line without a newline still counts\" \"2 3 partial.txt\" \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"\n  printf 'x\\n' > \"my notes.txt\"\n  run_solution \"my notes.txt\"\n  expect_eq \"handles spaces in file names\" \"1 1 my notes.txt\" \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"\n  printf '1\\n2\\n' > b.txt; : > empty.txt\n  run_solution b.txt empty.txt\n  expect_eq \"several files, in order (including an empty one)\" $'2 2 b.txt\\n0 0 empty.txt' \"$out\"\n)\n(\n  cd \"$(fresh_dir)\"\n  printf 'hi\\n' > real.txt\n  run_solution nope.txt real.txt\n  if [[ $status == 1 && $out == \"1 1 real.txt\" && $err == *\"count.sh: nope.txt: no such file\"* ]]; then\n    pass \"a missing file is reported; the rest still counted; exit 1\"\n  else\n    fail \"a missing file is reported; the rest still counted; exit 1\" \"status=$status stdout=[$out] stderr=[$err]\"\n  fi\n)\n(\n  cd \"$(fresh_dir)\"\n  run_solution\n  if [[ $status == 2 && $err == *usage* ]]; then pass \"no arguments: usage on stderr, exit 2\"\n  else fail \"no arguments: usage on stderr, exit 2\" \"status=$status stderr=[$err]\"; fi\n)\n",
+  "reference_solution": "#!/usr/bin/env bash\n# count.sh FILE...\nif (( $# == 0 )); then\n  echo \"usage: count.sh FILE...\" >&2\n  exit 2\nfi\n\nstatus=0\nfor f in \"$@\"; do            # \"$@\" keeps each argument intact, spaces and all\n  if [[ ! -f $f ]]; then\n    echo \"count.sh: $f: no such file\" >&2\n    status=1\n    continue\n  fi\n  lines=$(awk 'END { print NR }' \"$f\")   # awk counts a final unterminated line too\n  words=$(wc -w < \"$f\")\n  echo \"$lines $((words)) $f\"            # $((...)) strips any padding wc adds\ndone\nexit \"$status\"\n",
+  "hints": [
+    "`for f in \"$@\"` loops over the arguments exactly as given. `$@` without quotes splits `my notes.txt` into two words.",
+    "`awk 'END { print NR }' file` counts records, including a last line with no newline.",
+    "Remember a failure in a variable, `continue`, and `exit \"$status\"` after the loop."
+  ],
+  "discussion": "Things this practises:\n\n- **`\"$@\"`** is the correct way to pass arguments along. It expands to each argument as a separate, intact word. `$@` and `$*` unquoted re-split them, breaking file names with spaces (the starter's bug).\n- **Keep going, but remember the failure.** Tools like `cat`, `rm` and `grep` process every argument and report failures at the end through the exit status. Stopping at the first missing file, or ignoring it, are both worse.\n- **`wc -l` counts newlines, not lines.** A file whose last line has no `\\n` is undercounted by one. That's a real off-by-one bug in many scripts. `awk`'s `NR` counts records instead.\n- **`[[ -f $f ]]`** distinguishes \"regular file\" from \"doesn't exist\", directories, and so on. Inside `[[ ]]`, variables don't need quoting (no word splitting happens there), but quoting them is a harmless habit.\n\n**Follow-ups:** Why does `wc -l < file` print just a number while `wc -l file` also prints the name? How would you read from stdin when no files are given, like `cat` does?",
+  "language": "bash"
+}

@@ -11,6 +11,10 @@ import {
 import { normalizeOutput } from "../src/content/output.ts";
 import { SnippetCache, checkPythonSyntax, runSnippet } from "./run-snippet.ts";
 import { makeRunnable } from "../src/content/runnable.ts";
+import { composeChallenge, parseResults, type TestResult } from "../src/runners/challenge.ts";
+import { CHALLENGE_CPP_FLAGS, runProgram, type ProgramResult } from "./exec-program.ts";
+import { PRELUDES } from "./preludes.node.ts";
+import { createHash } from "node:crypto";
 
 const ROOT = join(import.meta.dirname, "..");
 const CONTENT_DIR = join(ROOT, "content");
@@ -124,6 +128,72 @@ export async function checkExperiments(items: Item[], cache: SnippetCache): Prom
   return errors.sort();
 }
 
+type ChallengeRun = { results: TestResult[]; result: Omit<ProgramResult, "stdout"> };
+
+async function runChallengeCached(
+  language: "python" | "cpp" | "bash",
+  code: string,
+  harness: string,
+  cache: SnippetCache,
+): Promise<ChallengeRun> {
+  const program = composeChallenge(language, code, harness, PRELUDES);
+  const key = "challenge:" + createHash("sha256")
+    .update(JSON.stringify([program, language === "cpp" ? CHALLENGE_CPP_FLAGS : []]))
+    .digest("hex");
+  const hit = cache.get(key);
+  if (hit !== undefined) return JSON.parse(hit);
+  const { stdout, ...result } = await runProgram(program);
+  const run: ChallengeRun = { results: parseResults(stdout).results, result };
+  if (!result.timedOut) cache.set(key, JSON.stringify(run)); // don't cache flaky timeouts
+  return run;
+}
+
+function describeFailure(run: ChallengeRun): string {
+  const { result, results } = run;
+  const failed = results.filter((r) => !r.pass).map((r) => `${r.name}: ${r.detail ?? "failed"}`);
+  const stderr = result.stderr.trim().split("\n").slice(-8).join("\n      ");
+  return [
+    result.timedOut ? "timed out" : `${result.stage} exit ${result.exitCode}`,
+    ...failed,
+    ...(stderr ? [`stderr:\n      ${stderr}`] : []),
+  ].join("\n    ");
+}
+
+/**
+ * For each code challenge: the reference solution must pass every test (at
+ * least 3, unique names, clean exit), and the starter code must run but fail
+ * at least one. Records the test names on the item.
+ */
+export async function verifyChallenges(items: Item[], cache: SnippetCache): Promise<string[]> {
+  const errors: string[] = [];
+  await Promise.all(
+    items.map(async (item) => {
+      if (item.type !== "code-challenge") return;
+      if (item.test_names !== undefined) {
+        errors.push(`${item.id}: remove "test_names" — the build records them from the harness`);
+        return;
+      }
+      const ref = await runChallengeCached(item.language, item.reference_solution, item.harness, cache);
+      const names = ref.results.map((r) => r.name);
+      if (ref.result.exitCode !== 0 || ref.results.some((r) => !r.pass) || ref.results.length === 0) {
+        errors.push(`${item.id}: reference solution doesn't pass the harness:\n    ${describeFailure(ref)}`);
+        return;
+      }
+      if (names.length < 3) errors.push(`${item.id}: needs at least 3 tests, has ${names.length}`);
+      if (new Set(names).size !== names.length) errors.push(`${item.id}: duplicate test names`);
+
+      const starter = await runChallengeCached(item.language, item.starter_code, item.harness, cache);
+      if (starter.result.stage === "compile") {
+        errors.push(`${item.id}: starter code must compile (stub it out):\n    ${describeFailure(starter)}`);
+      } else if (starter.results.length === names.length && starter.results.every((r) => r.pass)) {
+        errors.push(`${item.id}: starter code already passes every test`);
+      }
+      item.test_names = names;
+    }),
+  );
+  return errors.sort();
+}
+
 function itemOrder(a: Item, b: Item) {
   return (
     DIFFICULTY_RANK[a.difficulty] - DIFFICULTY_RANK[b.difficulty] ||
@@ -134,7 +204,11 @@ function itemOrder(a: Item, b: Item) {
 async function main() {
   const { items, errors } = loadContent();
   const cache = new SnippetCache(CACHE_DIR);
-  errors.push(...(await computeOutputs(items, cache)), ...(await checkExperiments(items, cache)));
+  errors.push(
+    ...(await computeOutputs(items, cache)),
+    ...(await checkExperiments(items, cache)),
+    ...(await verifyChallenges(items, cache)),
+  );
   cache.save();
   if (errors.length > 0) {
     console.error(`✗ content: ${errors.length} problem(s)\n  ` + errors.join("\n  "));

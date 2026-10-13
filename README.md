@@ -6,8 +6,8 @@ platform phases.
 
 ## Setup
 
-Requires **Node 22.18+** (`nvm use` reads `.nvmrc`), plus `python3` and `g++` for
-building predict-output items.
+Requires **Node 22.18+** (`nvm use` reads `.nvmrc`), plus `python3`, `g++` (13+)
+and `bash` (4+) for building content and running C++/Bash challenges.
 
 ```bash
 npm install
@@ -36,6 +36,7 @@ schema is in [src/content/schema.ts](src/content/schema.ts).
 | `case-mcq` | Read a scenario, pick 1 of 4 options | `scenario`, `question`, `options`, `correct_option_id`, optional Python `experimentation` |
 | `predict-output` | Predict what a Python or C++ snippet prints | `language`, `code`, `explanation`, optional `distractors` (multiple-choice mode), `try_this` |
 | `concept` | Write an explanation, then grade it against key points | `prompt`, `key_points` (2–6), `model_answer`, `follow_ups` |
+| `code-challenge` | Write Python, C++ or Bash that passes a test harness | `language`, `statement`, `starter_code`, `harness`, `reference_solution`, `hints`, `discussion` |
 
 Text fields support `` `code` ``, `**bold**`, `*italic*` and ```` ``` ```` code blocks.
 
@@ -55,6 +56,37 @@ fills it in, so the answer can't be wrong:
 
 Results are cached in `node_modules/.cache/caselearn/`, so only new or edited
 snippets are re-run.
+
+### code-challenge: tests are proven against a reference
+
+The harness is ordinary code using small helpers (see
+[src/runners/preludes/](src/runners/preludes/)):
+
+- **Python:** `@test("name")` on a function that uses `assert`; `raises(Exc, fn, *args)`.
+- **C++:** `TEST("name") { CHECK(...); CHECK_EQ(actual, expected); CHECK_THROWS(expr, Exc); }`.
+  The user's code must not define `main()`.
+- **Bash:** the user's script is `$SOLUTION`. Run it with `run_solution ARGS`
+  (sets `$out`, `$err`, `$status`), or `source "$SOLUTION"` to test functions.
+  Report with `pass NAME`, `fail NAME DETAIL` or `expect_eq NAME EXPECTED ACTUAL`.
+  Put each test in `( cd "$(fresh_dir)"; ... )` so tests can't affect each other.
+
+The build runs the harness against `reference_solution`, where every test
+(at least 3) must pass with a clean exit, and against `starter_code`, which must
+run (C++: compile) and fail at least one test. It records the test names; don't
+write `test_names` yourself. C++ is compiled with `-std=c++20 -Wall -Wextra`
+plus AddressSanitizer/UBSan, so leaks and undefined behaviour fail. Runs use
+`LC_ALL=C.UTF-8` so `sort` is deterministic.
+
+### Running challenges: the local runner
+
+Python challenges run in the browser (Pyodide). C++ and Bash run with your
+local `g++` and `bash` through a small endpoint that `npm run dev` and
+`npm run preview` add ([scripts/local-runner.ts](scripts/local-runner.ts)).
+It only accepts requests from the app's own page on localhost (Host, Origin
+and a custom header are checked), runs each program in a fresh temp directory
+with a time limit, and doesn't exist on a static deploy, where the app says
+"start it with npm run dev" instead. It runs your code with your user's
+permissions, exactly like running it in a terminal.
 
 ### Building
 
